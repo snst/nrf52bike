@@ -1,0 +1,11 @@
+graph TD
+   	eDeviceDiscovery -->eFoundDevice
+    eFoundDevice--"Connect()"-->eConnecting
+    eConnecting--"ConnectionCB()"-->eConnected
+    eConnected--"StartServiceDiscovery()"-->eServiceDiscovery
+    eServiceDiscovery--"ServiceCharacteristicsCB()"-->eFoundServiceCharacteristic_0x2A5B
+    eFoundServiceCharacteristic_0x2A5B--"DiscoverCharacteristicDescriptors()"-->eDiscoverCharacteristicDescriptors
+    eDiscoverCharacteristicDescriptors--"DiscoveredDescCB()"-->eFoundCharacteristicDescriptor_0x2902
+    eFoundCharacteristicDescriptor_0x2902--"RequestNotify()"-->eRunning
+    eDisconnected--"Connect()"-->eConnecting
+    eRunning-->eDisconnected
