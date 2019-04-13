@@ -2,11 +2,13 @@
 #include <rtos.h>
 #include "mbed.h"
 #include "ble/BLE.h"
+#include <sys/time.h>
 
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
 
 //#define ENABLE_DEBUG_PRINT
+//#define ENABLE_FLOW_PRINT
 #define ENABLE_INFO_PRINT
 
 #ifdef ENABLE_DEBUG_PRINT
@@ -16,6 +18,15 @@
     }
 #else
 #define DBG(...)
+#endif
+
+#ifdef ENABLE_FLOW_PRINT
+#define FLOW(...)            \
+    {                        \
+        printf(__VA_ARGS__); \
+    }
+#else
+#define FLOW(...)
 #endif
 
 #ifdef ENABLE_INFO_PRINT
@@ -39,6 +50,7 @@ enum state_t
     eFoundServiceCharacteristic_0x2A5B,
     eDiscoverCharacteristicDescriptors,
     eFoundCharacteristicDescriptor_0x2902,
+    eRequestNotify,
     eRunning,
     eDisconnected
 };
@@ -47,18 +59,23 @@ Gap::Handle_t connection_handle = 0xFFFF;
 static DiscoveredCharacteristic characteristic_0x2A5B;
 static DiscoveredCharacteristicDescriptor descriptor_0x2902(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 static BLEProtocol::AddressBytes_t device_addr;
-static bool tick = false;
 state_t state = eDeviceDiscovery;
 
-struct cscflags
+struct bikeResponse_t
 {
-    uint8_t _wheel_revolutions_present : 1;
-    uint8_t _crank_revolutions_present : 1;
-    uint8_t _reserved : 6;
+    uint8_t flags;
+    uint32_t wheelCounter;
+    uint16_t lastWheelEvent;
+    uint16_t crankCounter;
+    uint16_t lastCrankEvent;
 };
+
+static struct bikeResponse_t bikeResponse;
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
+
+Timer t;
 
 void process_data(const uint8_t *data, uint32_t len)
 {
@@ -73,30 +90,56 @@ void process_data(const uint8_t *data, uint32_t len)
 
     if (len == 11)
     {
-        uint8_t flags = data[0];
-        uint32_t wheelCounter = 0;
-        uint16_t lastWheelEvent = 0;
-        uint16_t crankCounter = 0;
-        uint16_t lastCrankEvent = 0;
-        uint8_t p = 1;
+        static struct bikeResponse_t r = {0};
 
-        if (flags & FLAG_WHEEL_PRESENT)
+        uint8_t p = 0;
+        r.flags = data[p++];
+
+        if (r.flags & FLAG_WHEEL_PRESENT)
         {
-            wheelCounter = data[p++];
-            wheelCounter |= data[p++] << 8;
-            wheelCounter |= data[p++] << 16;
-            wheelCounter |= data[p++] << 24;
-            lastWheelEvent = data[p++];
-            lastWheelEvent |= data[p++] << 8;
+            r.wheelCounter = data[p++];
+            r.wheelCounter |= data[p++] << 8;
+            r.wheelCounter |= data[p++] << 16;
+            r.wheelCounter |= data[p++] << 24;
+            r.lastWheelEvent = data[p++];
+            r.lastWheelEvent |= data[p++] << 8;
         }
-        if (flags & FLAG_CRANK_PRESENT)
+        if (r.flags & FLAG_CRANK_PRESENT)
         {
-            crankCounter = data[p++];
-            crankCounter |= data[p++] << 8;
-            lastCrankEvent = data[p++];
-            lastCrankEvent |= data[p++] << 8;
+            r.crankCounter = data[p++];
+            r.crankCounter |= data[p++] << 8;
+            r.lastCrankEvent = data[p++];
+            r.lastCrankEvent |= data[p++] << 8;
         }
-        INFO("**** wc=%u, we=%u, cc=%u, ce=%u\r\n", wheelCounter, lastWheelEvent, crankCounter, lastCrankEvent);
+
+        static uint32_t last_timestamp = 0;
+        uint32_t now = t.read_ms();
+        uint32_t delta_ms = now - last_timestamp;
+
+        uint32_t crank_counter_diff = r.crankCounter - bikeResponse.crankCounter;
+        uint32_t wheel_counter_diff = r.wheelCounter - bikeResponse.wheelCounter;
+
+        INFO("now: %ums, diff=%ums\r\n", now, delta_ms);
+        FLOW("val: wc=%u, we=%u, cc=%u, ce=%u\r\n", r.wheelCounter, r.lastWheelEvent, r.crankCounter, r.lastCrankEvent);
+        FLOW("dif: wc=%u, we=%u, cc=%u, ce=%u\r\n",
+             wheel_counter_diff,
+             r.lastWheelEvent - bikeResponse.lastWheelEvent,
+             crank_counter_diff,
+             r.lastCrankEvent - bikeResponse.lastCrankEvent);
+
+        float wheel = 2.170f;
+
+        float crank_per_min = ((float)crank_counter_diff) * 60000.0f / delta_ms;
+
+        float wheel_per_min = (((float)wheel_counter_diff) * 60000.0f / delta_ms);
+        float kmh = wheel * wheel_per_min * 60.0f / 1000.0f;
+
+        INFO("result: %f kmh, cadence=%f/min\r\n\r\n", kmh, wheel_per_min, crank_per_min);
+
+        last_timestamp = now;
+        bikeResponse = r;
+
+        //BLE::Instance().disconnect(Gap::REMOTE_USER_TERMINATED_CONNECTION);
     }
 }
 
@@ -110,7 +153,7 @@ void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
 
         if (params->peerAddr[5] == 0xf4)
         {
-            INFO("~AdvertisementCB() -> eFoundDevice\r\n");
+            FLOW("~AdvertisementCB() -> eFoundDevice\r\n");
             BLE::Instance().stopScan();
             memcpy(&device_addr, &params->peerAddr, sizeof(device_addr));
             state = eFoundDevice;
@@ -125,7 +168,7 @@ void ServiceDiscoveryCB(const DiscoveredService *service)
 
 void ReadCB(const GattReadCallbackParams *params)
 {
-    INFO("~ReadCB() len=%u\r\n", params->len);
+    FLOW("~ReadCB() len=%u\r\n", params->len);
 }
 
 void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
@@ -135,7 +178,7 @@ void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
         DBG("~ServiceCharacteristicsCB() UUID-%x valueAttr[%u] props[%x]\r\n", param->getUUID().getShortUUID(), param->getValueHandle(), (uint8_t)param->getProperties().broadcast());
         if (param->getUUID().getShortUUID() == 0x2A5B)
         {
-            INFO("~ServiceCharacteristicsCB() -> eFoundServiceCharacteristic_0x2A5B\r\n");
+            FLOW("~ServiceCharacteristicsCB() -> eFoundServiceCharacteristic_0x2A5B\r\n");
             characteristic_0x2A5B = *param;
             BLE::Instance().gattClient().terminateServiceDiscovery();
             state = eFoundServiceCharacteristic_0x2A5B;
@@ -150,7 +193,7 @@ static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryC
         DBG("~DiscoveredDescCB(), UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
         if (params->descriptor.getUUID().getShortUUID() == 0x2902)
         {
-            INFO("~DiscoveredDescCB() -> eFoundCharacteristicDescriptor_0x2902\r\n");
+            FLOW("~DiscoveredDescCB() -> eFoundCharacteristicDescriptor_0x2902\r\n");
             descriptor_0x2902 = params->descriptor;
             BLE::Instance().gattClient().terminateCharacteristicDescriptorDiscovery(params->characteristic);
             state = eFoundCharacteristicDescriptor_0x2902;
@@ -161,6 +204,11 @@ static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryC
 static void DiscoveredDescTerminationCB(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
     DBG("~DiscoveredDescTerminationCB()\r\n");
+    if (state == eFoundCharacteristicDescriptor_0x2902)
+    {
+        FLOW("~DiscoveredDescTerminationCB() [eFoundCharacteristicDescriptor_0x2902] => eRequestNotify\r\n");
+        state = eRequestNotify;
+    }
 }
 
 void DiscoverCharacteristicDescriptors()
@@ -168,7 +216,7 @@ void DiscoverCharacteristicDescriptors()
     if (!BLE::Instance().gattClient().isServiceDiscoveryActive())
     {
         ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_0x2A5B, DiscoveredDescCB, DiscoveredDescTerminationCB);
-        INFO("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors, err=0x%x\r\n", err);
+        FLOW("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors, err=0x%x\r\n", err);
         state = eDiscoverCharacteristicDescriptors;
     }
 }
@@ -176,6 +224,11 @@ void DiscoverCharacteristicDescriptors()
 void ServiceDiscoveryTerminationCB(Gap::Handle_t handle)
 {
     DBG("~ServiceDiscoveryTerminationCB()\r\n");
+    if (state == eFoundServiceCharacteristic_0x2A5B)
+    {
+        FLOW("~ServiceDiscoveryTerminationCB() [eFoundServiceCharacteristic_0x2A5B] => DiscoverCharacteristicDescriptors()\r\n");
+        DiscoverCharacteristicDescriptors();
+    }
 }
 
 void RequestNotify()
@@ -184,12 +237,12 @@ void RequestNotify()
     {
         uint16_t value = BLE_HVX_NOTIFICATION;
         ble_error_t err = BLE::Instance().gattClient().write(
-            GattClient::GATT_OP_WRITE_REQ,
+            GattClient::GATT_OP_WRITE_CMD,
             descriptor_0x2902.getConnectionHandle(),
             descriptor_0x2902.getAttributeHandle(),
             sizeof(uint16_t),
             (uint8_t *)&value);
-        INFO("~RequestNotify() ret=0x%x\r\n", err);
+        FLOW("~RequestNotify() ret=0x%x\r\n", err);
     }
 }
 
@@ -199,27 +252,27 @@ void ReadNotifyStatus()
         descriptor_0x2902.getConnectionHandle(),
         descriptor_0x2902.getAttributeHandle(),
         0);
-    INFO("~ReadNotifyStatus() ret=0x%x\r\n", err);
+    FLOW("~ReadNotifyStatus() ret=0x%x\r\n", err);
 }
 
 void DataReadCB(const GattReadCallbackParams *params)
 {
-    INFO("~DataReadCB(): handle %u, len=%u, ", params->handle, params->len);
+    FLOW("~DataReadCB(): handle %u, len=%u, ", params->handle, params->len);
     for (unsigned index = 0; index < params->len; index++)
     {
-        INFO(" %02x", params->data[index]);
+        FLOW(" %02x", params->data[index]);
     }
-    INFO("\r\n");
+    FLOW("\r\n");
 }
 
 void DataWriteCB(const GattWriteCallbackParams *params)
 {
-    INFO("~DataWriteCB(): handle %u, len=%u, status=0x%x, err=0x%x", params->handle, params->len, params->status, params->error_code);
+    FLOW("~DataWriteCB(): handle %u, len=%u, status=0x%x, err=0x%x", params->handle, params->len, params->status, params->error_code);
     for (unsigned index = 0; index < params->len; index++)
     {
-        INFO(" %02x", params->data[index]);
+        FLOW(" %02x", params->data[index]);
     }
-    INFO("\r\n");
+    FLOW("\r\n");
 }
 
 void ConnectionCB(const Gap::ConnectionCallbackParams_t *params)
@@ -235,7 +288,7 @@ void ConnectionCB(const Gap::ConnectionCallbackParams_t *params)
 
 void StartServiceDiscovery()
 {
-    INFO("~StartServiceDiscovery() -> eServiceDiscovery\r\n")
+    FLOW("~StartServiceDiscovery() -> eServiceDiscovery\r\n")
     BLE::Instance().gattClient().onServiceDiscoveryTermination(ServiceDiscoveryTerminationCB);
     BLE::Instance().gattClient().launchServiceDiscovery(connection_handle, ServiceDiscoveryCB, ServiceCharacteristicsCB /*, 0xa000, 0xa001*/);
     state = eServiceDiscovery;
@@ -249,29 +302,32 @@ void DisconnectionCB(const Gap::DisconnectionCallbackParams_t *param)
 
 void hvxCB(const GattHVXCallbackParams *params)
 {
-    INFO("~hvxCB(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
+    FLOW("~hvxCB(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
     for (unsigned index = 0; index < params->len; index++)
     {
-        INFO(" %02x", params->data[index]);
+        FLOW(" %02x", params->data[index]);
     }
+    FLOW("\r\n");
 
     if (params->type == BLE_HVX_NOTIFICATION)
     {
         process_data(params->data, params->len);
     }
-    INFO("\r\n");
+    FLOW("\r\n");
 }
 
 static void Connect()
 {
-    INFO("~Connect() -> eConnecting\r\n")
+    FLOW("~Connect() -> eConnecting\r\n")
     BLE::Instance().gap().connect(device_addr, BLEProtocol::AddressType::PUBLIC, NULL, NULL);
     state = eConnecting;
 }
 
+
 int main(void)
 {
     INFO("+main()\r\n");
+    t.start();
 
     BLE &ble = BLE::Instance();
     ble.init();
@@ -290,9 +346,10 @@ int main(void)
     // other stuff... whatevs
     connParams.slaveLatency = 0x01F3;                 //BLE_GAP_CP_SLAVE_LATENCY_MAX;
     connParams.connectionSupervisionTimeout = 0x0C80; //BLE_GAP_CP_CONN_SUP_TIMEOUT_MAX / 2;
+    connParams.connectionSupervisionTimeout = 0;      //BLE_GAP_CP_CONN_SUP_TIMEOUT_MAX / 2;
 
     // now, actually set your preferences
-    ble.gap().setPreferredConnectionParams(&connParams);
+    //ble.gap().setPreferredConnectionParams(&connParams);
 
     ble.gap().setScanParams(500, 400, 0, false);
     ble.gap().startScan(AdvertisementCB);
@@ -313,19 +370,18 @@ int main(void)
         case eConnecting:
             break;
         case eConnected:
-            INFO("SM: eConnected => StartServiceDiscovery()\r\n");
             StartServiceDiscovery();
             break;
         case eServiceDiscovery:
             break;
         case eFoundServiceCharacteristic_0x2A5B:
-            INFO("SM: eFoundServiceCharacteristic_0x2A5B => DiscoverCharacteristicDescriptors()\r\n");
-            DiscoverCharacteristicDescriptors();
+            // Wait for ServiceDiscoveryTerminationCB
             break;
         case eDiscoverCharacteristicDescriptors:
             break;
         case eFoundCharacteristicDescriptor_0x2902:
-            INFO("SM: eFoundCharacteristicDescriptor_0x2902 => RequestNotify() => eRunning\r\n");
+            break;
+        case eRequestNotify:
             RequestNotify();
             state = eRunning;
             break;
@@ -334,11 +390,6 @@ int main(void)
         case eDisconnected:
             Connect();
             break;
-        }
-
-        if (tick)
-        {
-            tick = false;
         }
 
         ble.waitForEvent();
