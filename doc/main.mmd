@@ -1,0 +1,16 @@
+graph TD
+   	Start-- "startScan()" -->DeviceDiscovery
+	  DeviceDiscovery-- "AdvertisementCB()" --> CheckAddr{Addr==0xf4}
+    CheckAddr -- yes --> Connecting
+    CheckAddr -- no --> DeviceDiscovery
+    Connecting -- "ConnectionCB() [role==Gap::CENTRAL]" -->Connected
+    Connected -- "launchServiceDiscovery()" --> ServiceCharacteristicsDiscovery
+    Connected -- "launchServiceDiscovery()"--> ServiceDiscovery
+    ServiceDiscovery -- "ServiceDiscoveryCB()" --> ServiceDiscovery
+    ServiceCharacteristicsDiscovery --"ServiceCharacteristicsCB() [UUID==0x2A5B]" --> ServiceCharacteristicsDiscovery
+    Connected --"ServiceDiscoveryTerminationCB()" --> DiscoverCharacteristicDescriptors
+    DiscoverCharacteristicDescriptors --"DiscoveredDescCB() [UUID==0x2902]"--> DiscoverCharacteristicDescriptors
+    DiscoverCharacteristicDescriptors --"DiscoveredDescTerminationCB()"--> FoundCharacteristicDescriptors
+
+    FoundCharacteristicDescriptors --"write(BLE_HVX_NOTIFICATION)" --> Running
+    Running --"Read()" --> Running

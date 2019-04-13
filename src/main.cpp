@@ -6,216 +6,401 @@
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
 
+#define ENABLE_DEBUG_PRINT
+#ifdef ENABLE_DEBUG_PRINT
+#define DBG(...)             \
+    {                        \
+        printf(__VA_ARGS__); \
+    }
+#else
+#define DBG(...)
+#endif
+
 Serial pc(USBTX, USBRX); // tx, rx
 
+Gap::Handle_t connection_handle = 0xFFFF;
 
-Gap::Handle_t connectionHandle = 0xFFFF;
+static bool found_characteristic = false;
+static DiscoveredCharacteristic found_characteristic_obj;
 
+static bool found_descriptor = false;
+static DiscoveredCharacteristicDescriptor found_descriptor_obj(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 
-static uint8_t characteristic_is_fond = 0;
-static DiscoveredCharacteristic Characteristic_values;
+//static DiscoveredCharacteristicDescriptor desc_of_Characteristic_values(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 
-static uint8_t descriptor_is_found = 0;
-static DiscoveredCharacteristicDescriptor desc_of_Characteristic_values(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
+static bool found_device = false;
+static bool do_connect = false;
+static bool is_connected = false;
+static bool send_tick = false;
+bool rr = true;
 
-void periodicCallback(void)
+static BLEProtocol::AddressBytes_t device_addr;
+
+struct cscflags
 {
-    pc.printf("#");
-}
+    uint8_t _wheel_revolutions_present : 1;
+    uint8_t _crank_revolutions_present : 1;
+    uint8_t _reserved : 6;
+};
 
-void advertisementCallback(const Gap::AdvertisementCallbackParams_t *params)
+#define FLAG_WHEEL_PRESENT (1)
+#define FLAG_CRANK_PRESENT (2)
+
+void process_data(const uint8_t *data, uint32_t len)
 {
-    if (params->peerAddr[5] != 0xf4)
-    { 
-        return;
+    //static const uint16_t MAX_BYTES = (1 + 4 + 2 + 2 + 2);
+
+    //00 04 00 20 e9 08 00 00 7d 05 00 00 c9 08
+
+    //03 be 09 00 00 c9 4d 9e 00 b5 50
+
+    // 03 6a 0a 00 00 bc 9c ad 00 1b fa**** wc=2666, we=40124, cc=173, ce=64027
+    // 03 77 0b 00 00 a5 b9 ad 00 1b fa**** wc=2935, we=47525, cc=173, ce=64027
+
+    if (len == 11)
+    {
+        uint8_t flags = data[0];
+        uint32_t wheelCounter = 0;
+        uint16_t lastWheelEvent = 0;
+        uint16_t crankCounter = 0;
+        uint16_t lastCrankEvent = 0;
+        uint8_t p = 1;
+
+        if (flags & FLAG_WHEEL_PRESENT)
+        {
+            wheelCounter = data[p++];
+            wheelCounter |= data[p++] << 8;
+            wheelCounter |= data[p++] << 16;
+            wheelCounter |= data[p++] << 24;
+            lastWheelEvent = data[p++];
+            lastWheelEvent |= data[p++] << 8;
+        }
+        if (flags & FLAG_CRANK_PRESENT)
+        {
+            crankCounter = data[p++];
+            crankCounter |= data[p++] << 8;
+            lastCrankEvent = data[p++];
+            lastCrankEvent |= data[p++] << 8;
+        }
+        printf("**** wc=%u, we=%u, cc=%u, ce=%u\r\n", wheelCounter, lastWheelEvent, crankCounter, lastCrankEvent);
     }
-    BLE::Instance().stopScan();
-    printf("adv peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u\r\n",
-           params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
-           params->rssi, params->isScanResponse, params->type, params->peerAddrType);
-
-    printf("+connecting..\r\n");
-    BLE::Instance().gap().connect(params->peerAddr, BLEProtocol::AddressType::PUBLIC /*params->peerAddrType*/, NULL, NULL);
-    printf("-connecting..\r\n");
 }
 
-void serviceDiscoveryCallback(const DiscoveredService *service)
+void PeriodicCB(void)
 {
+    //DBG("#\r\n");
+    send_tick = true;
+    /*
+    */
+}
+
+void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
+{
+    if (params->peerAddr[5] == 0xf4)
+    {
+        DBG("~AdvertisementCB peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u.",
+            params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
+            params->rssi, params->isScanResponse, params->type, params->peerAddrType);
+
+        DBG(" -> found 0xf4 -> stopScan -> connect");
+        BLE::Instance().stopScan();
+
+        /*
+        Gap::ConnectionParams_t connection_parameters = {
+            50,  // min connection interval
+            100, // max connection interval
+            0,   // slave latency
+            600  // connection supervision timeout
+        };
+        // scan parameter used to find the device to connect to
+        GapScanningParams scanning_params(
+            100,  // interval
+            100,  // window
+            3000,    // timeout
+            false // active
+        );
+
+        BLE::Instance().gap().connect(params->peerAddr, BLEProtocol::AddressType::PUBLIC, &connection_parameters,
+                                      &scanning_params);
+                                      */
+
+        memcpy(&device_addr, &params->peerAddr, sizeof(device_addr));
+        found_device = true;
+        do_connect = true;
+
+        //        BLE::Instance().gap().connect(params->peerAddr, BLEProtocol::AddressType::PUBLIC, NULL, NULL);
+        DBG("\r\n");
+    }
+}
+
+void ServiceDiscoveryCB(const DiscoveredService *service)
+{
+#if 0
     if (service->getUUID().shortOrLong() == UUID::UUID_TYPE_SHORT)
     {
-        printf("S UUID-%x attrs[%u %u]\r\n", service->getUUID().getShortUUID(), service->getStartHandle(), service->getEndHandle());
+        DBG("~ServiceDiscoveryCB() S UUID-%x", service->getUUID().getShortUUID());
     }
     else
     {
-        printf("S UUID-");
+        DBG("~ServiceDiscoveryCB() L UUID-");
         const uint8_t *longUUIDBytes = service->getUUID().getBaseUUID();
         for (unsigned i = 0; i < UUID::LENGTH_OF_LONG_UUID; i++)
         {
-            printf("%02x", longUUIDBytes[i]);
+            DBG("%02x", longUUIDBytes[i]);
         }
-        printf(" attrs[%u %u]\r\n", service->getStartHandle(), service->getEndHandle());
+    }
+    DBG(", attrs[%u %u]\r\n", service->getStartHandle(), service->getEndHandle());
+#endif
+}
+
+void ReadCB(const GattReadCallbackParams *params)
+{
+    DBG("~ReadCB() len=%u\r\n", params->len);
+}
+
+void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
+{
+    if (param->getUUID().getShortUUID() == 0x2A5B)
+    {
+        DBG("~ServiceCharacteristicsCB() UUID-%x valueAttr[%u] props[%x]", param->getUUID().getShortUUID(), param->getValueHandle(), (uint8_t)param->getProperties().broadcast());
+        DBG(" -> found 0x2A5B -> save characteristic");
+        found_characteristic = true;
+        found_characteristic_obj = *param;
+        DBG("\r\n");
     }
 }
 
-void readCallback(const GattReadCallbackParams *params)
+static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryCallbackParams_t *params)
 {
-    printf("read: len=%u\r\n", params->len);
-}
-
-void characteristicDiscoveryCallback(const DiscoveredCharacteristic *characteristicP)
-{
-
-    printf("  C UUID-%x valueAttr[%u] props[%x]\r\n", characteristicP->getUUID().getShortUUID(), characteristicP->getValueHandle(), (uint8_t)characteristicP->getProperties().broadcast());
-
-    //  printf("  C UUID-%x valueAttr[%u] props[%x]\r\n", characteristicP->getShortUUID(), characteristicP->getValueHandle(), (uint8_t)characteristicP->getProperties().broadcast());
-    if (characteristicP->getUUID().getShortUUID() == 0x2A5B)
-    { /* !ALERT! Update this filter to suit your device. */
-        printf("found ch\r\n");
-        //buttonCharacteristic      = *characteristicP;
-        //foundButtonCharacteristic = true;
-        //ble_error_t e = characteristicP->read(0, readCallback);
-        //printf("found ch, ret=%u\r\n", e);
-
-        characteristic_is_fond = 1;
-        Characteristic_values = *characteristicP;
-
-        /*
-            uint16_t value = BLE_HVX_NOTIFICATION;
-        BLE::Instance().gattClient().write(GattClient::GATT_OP_WRITE_REQ,
-                                           connectionHandle,
-                                           Characteristic_values.getValueHandle() + 1, // HACK Alert. We're assuming that CCCD descriptor immediately follows the value attribute. 
-                                           sizeof(uint16_t),                          // HACK Alert! size should be made into a BLE_API constant. 
-                                           reinterpret_cast<const uint8_t *>(&value));
-                                           */
-    }
-}
-
-static void discoveredCharsDescriptorCallBack(const CharacteristicDescriptorDiscovery::DiscoveryCallbackParams_t *params)
-{
-    printf("+discoveredCharsDescriptorCallBack, UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
     if (params->descriptor.getUUID().getShortUUID() == 0x2902)
     {
-        // Save characteristic info
-        printf("..descriptor_is_found=1\r\n");
-        descriptor_is_found = 1;
-        desc_of_Characteristic_values = params->descriptor;
+        DBG("~DiscoveredDescCB(), UUID %x, ", params->descriptor.getUUID().getShortUUID());
+        DBG(" found 0x2902, save descriptor");
+        found_descriptor = true;
+        found_descriptor_obj = params->descriptor;
+        DBG("\r\n");
     }
 }
 
-static void discoveredDescTerminationCallBack(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
+static void DiscoveredDescTerminationCB(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
-    printf("+discoveredDescTerminationCallBack\r\n");
-    if (descriptor_is_found)
+    DBG("~DiscoveredDescTerminationCB()");
+    if (found_descriptor)
     {
-        printf("write value 1\r\n");
+        DBG(", descriptor already found, write notify, h1=0x%x, h2=0x%x",
+            found_characteristic_obj.getConnectionHandle(),
+            found_descriptor_obj.getConnectionHandle());
+
         uint16_t value = BLE_HVX_NOTIFICATION;
-        //uint16_t value = BLE_HVX_INDICATION;
-        ble_error_t err = BLE::Instance().gattClient().write(
+        ble_error_t err;
+
+        /* THIS
+        err = BLE::Instance().gattClient().write(
             GattClient::GATT_OP_WRITE_REQ,
-            Characteristic_values.getConnectionHandle(),
-            desc_of_Characteristic_values.getAttributeHandle(),
+            found_descriptor_obj.getConnectionHandle(),
+            found_descriptor_obj.getAttributeHandle(),
             sizeof(uint16_t),
             (uint8_t *)&value);
-            printf("write err=%u\r\n", err);
+*/
+
+        /*
+        err = BLE::Instance().gattClient().write(
+            GattClient::GATT_OP_WRITE_REQ,
+            connection_handle,
+            found_characteristic_obj.getValueHandle() + 1,
+            sizeof(uint16_t),
+            (uint8_t *)&value);
+*/
+        printf("write err=0x%x\r\n", err);
+
+        is_connected = true;
+
+        //        DBG("write: 0x%x\r\n", err);
+        //        err = BLE::Instance().gattClient().read(
+        //            found_descriptor_obj.getConnectionHandle(),
+        //            found_descriptor_obj.getAttributeHandle(), 0);
+
+        //ble_error_t err = found_characteristic_obj.write(sizeof(uint16_t),(uint8_t *)&value);
+        //        DBG(", err=%u", err);
     }
+    DBG("\r\n");
 }
 
-void discoveryTerminationCallback(Gap::Handle_t connectionHandle)
+void ServiceDiscoveryTerminationCB(Gap::Handle_t handle)
 {
-    printf("terminated SD for handle %u\r\n", connectionHandle);
-    if (characteristic_is_fond == 1)
+    DBG("~ServiceDiscoveryTerminationCB() for handle %u", handle);
+    if (found_characteristic)
     {
-        printf("..discoverCharacteristicDescriptors\r\n");
-        BLE::Instance().gattClient().discoverCharacteristicDescriptors(Characteristic_values, discoveredCharsDescriptorCallBack, discoveredDescTerminationCallBack);
+        DBG(", characteristic already found -> discoverCharacteristicDescriptors");
+        BLE::Instance().gattClient().discoverCharacteristicDescriptors(found_characteristic_obj, DiscoveredDescCB, DiscoveredDescTerminationCB);
     }
+    DBG("\r\n");
 }
 
-void onDataReadCallBack(const GattReadCallbackParams *params)
+void DataReadCB(const GattReadCallbackParams *params)
 {
-
-    printf("onDataReadCallBack: handle %u\r\n", params->handle);
+    DBG("~DataReadCB: handle %u, len=%u, ", params->handle, params->len);
     for (unsigned index = 0; index < params->len; index++)
     {
-        printf(" %02x", params->data[index]);
+        DBG(" %02x", params->data[index]);
     }
-    printf("\r\n");
+    /*
+    uint16_t value = BLE_HVX_NOTIFICATION;
+    ble_error_t err;
+
+    err = BLE::Instance().gattClient().write(
+        GattClient::GATT_OP_WRITE_REQ,
+        found_descriptor_obj.getConnectionHandle(),
+        found_descriptor_obj.getAttributeHandle(),
+        sizeof(uint16_t),
+        (uint8_t *)&value);
+    DBG("write: 0x%x\r\n", err);
+        */
+    DBG("\r\n");
 }
 
-void connectionCallback(const Gap::ConnectionCallbackParams_t *params)
+void DataWriteCB(const GattWriteCallbackParams *params)
 {
-    printf("+connectionCallback\r\n");
+    DBG("~DataWriteCB: handle %u, len=%u, statux=0x%x, err=0x%x", params->handle, params->len, params->status, params->error_code);
+    for (unsigned index = 0; index < params->len; index++)
+    {
+        DBG(" %02x", params->data[index]);
+    }
+
+    DBG("\r\n");
+}
+
+void ConnectionCB(const Gap::ConnectionCallbackParams_t *params)
+{
+    DBG("~ConnectionCB()");
     if (params->role == Gap::CENTRAL)
     {
-        printf("..launchServiceDiscovery\r\n");
-        connectionHandle = params->handle;
-        BLE::Instance().gattClient().onServiceDiscoveryTermination(discoveryTerminationCallback);
-        BLE::Instance().gattClient().launchServiceDiscovery(params->handle, serviceDiscoveryCallback, characteristicDiscoveryCallback /*, 0xa000, 0xa001*/);
+        connection_handle = params->handle;
+        DBG(", Role:Central, connectionHandle=0x%x -> launchServiceDiscovery", connection_handle);
+        BLE::Instance().gattClient().onServiceDiscoveryTermination(ServiceDiscoveryTerminationCB);
+        BLE::Instance().gattClient().launchServiceDiscovery(params->handle, ServiceDiscoveryCB, ServiceCharacteristicsCB /*, 0xa000, 0xa001*/);
     }
-    printf("-connectionCallback\r\n");
+    DBG("\r\n");
 }
-/*
-void disconnectionCallback(Gap::Handle_t handle, Gap::DisconnectionReason_t reason) {
-    printf("disconnected\r\n");
-}
-*/
-void disconnectionCallback(const Gap::DisconnectionCallbackParams_t * param)
+
+void DisconnectionCB(const Gap::DisconnectionCallbackParams_t *param)
 {
     //BLE::Instance().gap().startAdvertising();
-    printf("disconnected 0x%x\r\n", param->reason);
+    DBG("~DisconnectionCB(), reason=0x%x\r\n", param->reason);
+    do_connect = true;
+    is_connected = false;
+    rr = true;
 }
 
-void hvxCallback(const GattHVXCallbackParams *params)
+void hvxCB(const GattHVXCallbackParams *params)
 {
-    printf("hvxCallback: handle %u; type %s\r\n", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
+    DBG("~hvxCB: handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
     for (unsigned index = 0; index < params->len; index++)
     {
-        printf(" %02x", params->data[index]);
+        DBG(" %02x", params->data[index]);
     }
-    printf("\r\n");
-}
 
-//GattClient::ReadCallback_t
+    if (params->type == BLE_HVX_NOTIFICATION)
+    {
+        process_data(params->data, params->len);
+    }
+    DBG("\r\n");
+}
 
 int main(void)
 {
-    printf("+main()\r\n");
-    //    Ticker ticker;
-    //    ticker.attach(periodicCallback, 1);
+    DBG("+main()\r\n");
+    Ticker ticker;
+    ticker.attach(PeriodicCB, 1);
+
     BLE &ble = BLE::Instance();
 
     ble.init();
-    ble.gap().onConnection(connectionCallback);
-    ble.gap().onDisconnection(disconnectionCallback);
+    ble.gap().onConnection(ConnectionCB);
+    ble.gap().onDisconnection(DisconnectionCB);
 
-    ble.gap().setScanParams(500, 400);
-    ble.gap().startScan(advertisementCallback);
+    Gap::ConnectionParams_t connParams;
+    connParams.minConnectionInterval = 0xFFFF; //BLE_GAP_CP_MIN_CONN_INTVL_MIN;
 
-    ble.gattClient().onHVX(hvxCallback);
-    ble.gattClient().onDataRead(onDataReadCallBack);
+    // set the maximum we'd prefer such that we can get 3 packets accross in time
+    // 1000 ms * 4 samples/packet * 3 packets per interval / (1.25 ms units * Freq)
+    // at 300 Hz, this gives 32 units of 1.25ms (so 40ms, or 25 connection events/s)
+    connParams.maxConnectionInterval = 0xFFFF;
+    //        ((100000ull * 4 * 3) / (125 * SAMPLING_FREQUENCY_HZ));
+
+    // other stuff... whatevs
+    connParams.slaveLatency = 0x01F3;                 //BLE_GAP_CP_SLAVE_LATENCY_MAX;
+    connParams.connectionSupervisionTimeout = 0x0C80; //BLE_GAP_CP_CONN_SUP_TIMEOUT_MAX / 2;
+
+    // now, actually set your preferences
+    ble.gap().setPreferredConnectionParams(&connParams);
+
+    ble.gap().setScanParams(500, 400, 0, false);
+    ble.gap().startScan(AdvertisementCB);
+
+    ble.gattClient().onHVX(hvxCB);
+    ble.gattClient().onDataRead(DataReadCB);
+    ble.gattClient().onDataWrite(DataWriteCB);
 
     while (true)
     {
-#if 0
-        if (foundButtonCharacteristic && !ble.gattClient().isServiceDiscoveryActive()) {
-            //foundButtonCharacteristic = false; /* need to do the following only once */
- 
-            /* Note: Yuckiness alert! The following needs to be encapsulated in a neat API.
-             * It isn't clear whether we should provide a DiscoveredCharacteristic::enableNoticiation() or
-             * DiscoveredCharacteristic::discoverDescriptors() followed by DiscoveredDescriptor::write(...). */
-            
-            uint16_t value = BLE_HVX_NOTIFICATION;
-            ble.gattClient().write(GattClient::GATT_OP_WRITE_REQ,
-                                   connectionHandle,
-                                   buttonCharacteristic.getValueHandle() + 1, /* HACK Alert. We're assuming that CCCD descriptor immediately follows the value attribute. */
-                                   sizeof(uint16_t),                          /* HACK Alert! size should be made into a BLE_API constant. */
-                                   reinterpret_cast<const uint8_t *>(&value));
-            
-            printf("+read\r\n");
-            buttonCharacteristic.read(0, readCallback);
-            printf("-read\r\n");
-            
+        if (found_device && do_connect)
+        {
+            do_connect = false;
+            BLE::Instance().gap().connect(device_addr, BLEProtocol::AddressType::PUBLIC, NULL, NULL);
         }
-#endif
+
+        if (send_tick && is_connected)
+        {
+            send_tick = false;
+            ble_error_t err;
+
+            if (rr)
+            {
+                uint16_t value = BLE_HVX_NOTIFICATION;
+                err = BLE::Instance().gattClient().write(
+                    GattClient::GATT_OP_WRITE_REQ,
+                    found_descriptor_obj.getConnectionHandle(),
+                    found_descriptor_obj.getAttributeHandle(),
+                    sizeof(uint16_t),
+                    (uint8_t *)&value);
+                rr = false;
+                printf("WRITE NOTY 0x%x", err);
+            }
+            else
+            {
+
+                err = BLE::Instance().gattClient().read(
+                    found_descriptor_obj.getConnectionHandle(),
+                    found_descriptor_obj.getAttributeHandle(),
+                    0);
+            }
+            //DBG("read: 0x%x\r\n", err);
+        }
+
+        if (found_characteristic && !ble.gattClient().isServiceDiscoveryActive())
+        {
+            //    found_characteristic = false;
+            //    uint16_t value = BLE_HVX_NOTIFICATION;
+            /*            ble_error_t err = BLE::Instance().gattClient().write(
+                GattClient::GATT_OP_WRITE_REQ,
+                found_descriptor_obj.getConnectionHandle(),
+                found_descriptor_obj.getAttributeHandle(),
+                sizeof(uint16_t),
+                (uint8_t *)&value);
+*/
+            /*
+            ble_error_t err = BLE::Instance().gattClient().write(
+                GattClient::GATT_OP_WRITE_REQ,
+                connection_handle,
+                found_characteristic_obj.getValueHandle() + 1,
+                sizeof(uint16_t),
+                (uint8_t *)&value);
+
+
+                DBG("write BLE_HVX_NOTIFICATION, err=0x%x\r\n", err);*/
+        }
+
         ble.waitForEvent();
     }
 }
