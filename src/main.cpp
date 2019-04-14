@@ -7,7 +7,7 @@
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
 #include "gfxfont.h"
-#include "FreeMono24pt7b.h"
+#include "FreeMonoBold24pt7b.h"
 #include <Adafruit_ST7735.h>
 
 //#define ENABLE_DEBUG_PRINT
@@ -51,6 +51,10 @@ PinName TFT_RST = (PinName)7;
 Serial pc(USBTX, USBRX); // tx, rx
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
 //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
+
+Ticker ticker;
+uint8_t speed_current = 0;
+uint8_t speed_shown = 99;
 
 enum state_t
 {
@@ -145,6 +149,7 @@ void process_data(const uint8_t *data, uint32_t len)
 
         float wheel_per_min = (((float)wheel_counter_diff) * 60000.0f / delta_ms);
         float kmh = wheel * wheel_per_min * 60.0f / 1000.0f;
+        speed_current = (uint8_t) kmh;
 
         INFO("result: %f kmh, cadence=%f/min\r\n\r\n", kmh, wheel_per_min, crank_per_min);
 
@@ -269,22 +274,22 @@ void ReadNotifyStatus()
 
 void DataReadCB(const GattReadCallbackParams *params)
 {
-    FLOW("~DataReadCB(): handle %u, len=%u, ", params->handle, params->len);
+    INFO("~DataReadCB(): handle %u, len=%u, ", params->handle, params->len);
     for (unsigned index = 0; index < params->len; index++)
     {
-        FLOW(" %02x", params->data[index]);
+        INFO(" %02x", params->data[index]);
     }
-    FLOW("\r\n");
+    INFO("\r\n");
 }
 
 void DataWriteCB(const GattWriteCallbackParams *params)
 {
-    FLOW("~DataWriteCB(): handle %u, len=%u, status=0x%x, err=0x%x", params->handle, params->len, params->status, params->error_code);
+    INFO("~DataWriteCB(): handle %u, len=%u, status=0x%x, err=0x%x", params->handle, params->len, params->status, params->error_code);
     for (unsigned index = 0; index < params->len; index++)
     {
-        FLOW(" %02x", params->data[index]);
+        INFO(" %02x", params->data[index]);
     }
-    FLOW("\r\n");
+    INFO("\r\n");
 }
 
 void ConnectionCB(const Gap::ConnectionCallbackParams_t *params)
@@ -335,6 +340,14 @@ static void Connect()
     state = eConnecting;
 }
 
+int32_t g_i = 0;
+void Tick()
+{
+    //tft.printf("%i",i);
+    printf("%i\r\n", g_i);
+    g_i++;
+}
+
 int main(void)
 {
     INFO("+main()\r\n");
@@ -342,17 +355,17 @@ int main(void)
 
     //tft.initB();
     tft.initR(INITR_MINI160x80);
-  //  tft.fillRect(0,0,80,160, ST77XX_GREEN);
+    //  tft.fillRect(0,0,80,160, ST77XX_GREEN);
     //tft.fillRect(1,80,81,2, ST77XX_RED);
     //tft.fillRect(0,82,81,2, ST77XX_BLUE);
 
     tft.setTextWrap(false);
-  tft.fillScreen(ST77XX_BLACK);
-  tft.setFont(&FreeMono24pt7bBitmaps);
-  tft.setTextCursor(10, 10);
-  //tft.setTextSize(3);
-  tft.setTextColor(Adafruit_ST7735::Color565(255,255,0));
-  tft.printf("32");
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setFont(&FreeMonoBold24pt7b);
+    //tft.setTextSize(3);
+    tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 0));
+
+//    ticker.attach(&Tick, 1);
 
     BLE &ble = BLE::Instance();
     ble.init();
@@ -415,6 +428,14 @@ int main(void)
         case eDisconnected:
             Connect();
             break;
+        }
+
+        if (speed_shown != speed_current)
+        {
+            speed_shown = speed_current;
+            tft.fillRect(0,0,80,50, ST77XX_BLACK);
+            tft.setCursor(10, 40);
+            tft.printf("%d", speed_shown);
         }
 
         ble.waitForEvent();
