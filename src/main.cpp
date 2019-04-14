@@ -6,6 +6,8 @@
 
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
+#include "gfxfont.h"
+#include "FreeMono24pt7b.h"
 #include <Adafruit_ST7735.h>
 
 //#define ENABLE_DEBUG_PRINT
@@ -340,9 +342,17 @@ int main(void)
 
     //tft.initB();
     tft.initR(INITR_MINI160x80);
-    tft.fillRect(0,0,80,160, ST77XX_GREEN);
-    tft.fillRect(1,80,81,2, ST77XX_RED);
-    tft.fillRect(0,82,81,2, ST77XX_BLUE);
+  //  tft.fillRect(0,0,80,160, ST77XX_GREEN);
+    //tft.fillRect(1,80,81,2, ST77XX_RED);
+    //tft.fillRect(0,82,81,2, ST77XX_BLUE);
+
+    tft.setTextWrap(false);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setFont(&FreeMono24pt7bBitmaps);
+  tft.setTextCursor(10, 10);
+  //tft.setTextSize(3);
+  tft.setTextColor(Adafruit_ST7735::Color565(255,255,0));
+  tft.printf("32");
 
     BLE &ble = BLE::Instance();
     ble.init();

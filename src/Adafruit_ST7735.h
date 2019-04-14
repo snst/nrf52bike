@@ -104,7 +104,7 @@ public:
   void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
 
-  uint16_t Color565(uint8_t r, uint8_t g, uint8_t b);
+  static uint16_t Color565(uint8_t r, uint8_t g, uint8_t b);
 
   // Differences between displays (usu. identified by colored tab on
   // plastic overlay) are odd enough that we need to do this 'by hand':
