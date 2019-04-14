@@ -6,6 +6,7 @@
 
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
+#include <Adafruit_ST7735.h>
 
 //#define ENABLE_DEBUG_PRINT
 //#define ENABLE_FLOW_PRINT
@@ -38,7 +39,16 @@
 #define INFO(...)
 #endif
 
+PinName TFT_CS = (PinName)8;
+PinName TFT_DC = (PinName)6;
+PinName TFT_MOSI = (PinName)2;
+PinName TFT_MISO = (PinName)27; // disable
+PinName TFT_SCLK = (PinName)3;
+PinName TFT_RST = (PinName)7;
+
 Serial pc(USBTX, USBRX); // tx, rx
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
+//PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
 
 enum state_t
 {
@@ -323,11 +333,21 @@ static void Connect()
     state = eConnecting;
 }
 
-
 int main(void)
 {
     INFO("+main()\r\n");
     t.start();
+
+    //tft.initB();
+    tft.initR();
+    tft.fillRect(0,0,82,100, ST7735_GREEN);
+    tft.fillRect(1,80,81,2, ST7735_RED);
+    tft.fillRect(0,82,81,2, ST7735_BLUE);
+
+    /* tft.initR(INITR_MINI160x80);   // initialize a ST7735S chip, mini display
+    tft.fillRe
+     tft.fillTriangle(150, 30, 150, 50, 160, 40, color);
+ */
 
     BLE &ble = BLE::Instance();
     ble.init();
