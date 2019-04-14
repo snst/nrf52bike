@@ -339,15 +339,10 @@ int main(void)
     t.start();
 
     //tft.initB();
-    tft.initR();
-    tft.fillRect(0,0,82,100, ST7735_GREEN);
-    tft.fillRect(1,80,81,2, ST7735_RED);
-    tft.fillRect(0,82,81,2, ST7735_BLUE);
-
-    /* tft.initR(INITR_MINI160x80);   // initialize a ST7735S chip, mini display
-    tft.fillRe
-     tft.fillTriangle(150, 30, 150, 50, 160, 40, color);
- */
+    tft.initR(INITR_MINI160x80);
+    tft.fillRect(0,0,80,160, ST77XX_GREEN);
+    tft.fillRect(1,80,81,2, ST77XX_RED);
+    tft.fillRect(0,82,81,2, ST77XX_BLUE);
 
     BLE &ble = BLE::Instance();
     ble.init();
