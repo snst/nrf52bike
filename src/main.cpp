@@ -41,13 +41,6 @@
 #define INFO(...)
 #endif
 
-PinName TFT_CS = (PinName)8;
-PinName TFT_DC = (PinName)6;
-PinName TFT_MOSI = (PinName)2;
-PinName TFT_MISO = (PinName)27; // disable
-PinName TFT_SCLK = (PinName)3;
-PinName TFT_RST = (PinName)7;
-
 Serial pc(USBTX, USBRX); // tx, rx
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
 //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
