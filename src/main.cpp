@@ -11,7 +11,7 @@
 #include <Adafruit_ST7735.h>
 
 //#define ENABLE_DEBUG_PRINT
-//#define ENABLE_FLOW_PRINT
+#define ENABLE_FLOW_PRINT
 #define ENABLE_INFO_PRINT
 
 #ifdef ENABLE_DEBUG_PRINT
@@ -48,6 +48,8 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_
 Ticker ticker;
 uint8_t speed_current = 0;
 uint8_t speed_shown = 99;
+uint8_t bat_current = 0;
+uint8_t bat_shown = 0;
 
 enum state_t
 {
@@ -56,19 +58,25 @@ enum state_t
     eConnecting,
     eConnected,
     eServiceDiscovery,
-    eFoundServiceCharacteristic_0x2A5B,
-    eDiscoverCharacteristicDescriptors,
-    eFoundCharacteristicDescriptor_0x2902,
+    eDiscoverCharacteristicDescriptors_csc,
+    eDiscoverCharacteristicDescriptors_bat,
+    eFoundCharacteristicDescriptor_csc_0x2902,
+    eFoundCharacteristicDescriptor_bat_0x2902,
     eRequestNotify,
     eRunning,
     eDisconnected
 };
 
 Gap::Handle_t connection_handle = 0xFFFF;
-static DiscoveredCharacteristic characteristic_0x2A5B;
+static DiscoveredCharacteristic characteristic_csc;
+static DiscoveredCharacteristic characteristic_bat;
 static DiscoveredCharacteristicDescriptor descriptor_0x2902(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 static BLEProtocol::AddressBytes_t device_addr;
 state_t state = eDeviceDiscovery;
+static bool found_char_2a5b_csc = false;
+static bool found_char_2a19_bat = false;
+static bool found_desc_2a5b_csc = false;
+static bool found_desc_2a19_bat = false;
 
 struct bikeResponse_t
 {
@@ -183,30 +191,43 @@ void ReadCB(const GattReadCallbackParams *params)
 
 void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
 {
-    if (state == eServiceDiscovery)
+    DBG("~ServiceCharacteristicsCB() UUID-%x valueAttr[%u] props[%x]\r\n", param->getUUID().getShortUUID(), param->getValueHandle(), (uint8_t)param->getProperties().broadcast());
+    if (param->getUUID().getShortUUID() == 0x2A5B)
     {
-        DBG("~ServiceCharacteristicsCB() UUID-%x valueAttr[%u] props[%x]\r\n", param->getUUID().getShortUUID(), param->getValueHandle(), (uint8_t)param->getProperties().broadcast());
-        if (param->getUUID().getShortUUID() == 0x2A5B)
-        {
-            FLOW("~ServiceCharacteristicsCB() -> eFoundServiceCharacteristic_0x2A5B\r\n");
-            characteristic_0x2A5B = *param;
-            BLE::Instance().gattClient().terminateServiceDiscovery();
-            state = eFoundServiceCharacteristic_0x2A5B;
-        }
+        FLOW("~ServiceCharacteristicsCB() -> found_char_2a5b_csc\r\n");
+        characteristic_csc = *param;
+        found_char_2a5b_csc = true;
+    }
+    else if (param->getUUID().getShortUUID() == 0x2A19) // battery
+    {
+        FLOW("~ServiceCharacteristicsCB() -> found_char_2a19_bat\r\n");
+        characteristic_bat = *param;
+        found_char_2a19_bat = true;
     }
 }
 
 static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryCallbackParams_t *params)
 {
-    if (state == eDiscoverCharacteristicDescriptors)
+    if (state == eDiscoverCharacteristicDescriptors_csc)
     {
         DBG("~DiscoveredDescCB(), UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
         if (params->descriptor.getUUID().getShortUUID() == 0x2902)
         {
-            FLOW("~DiscoveredDescCB() -> eFoundCharacteristicDescriptor_0x2902\r\n");
+            FLOW("~DiscoveredDescCB() -> eFoundCharacteristicDescriptor_csc_0x2902\r\n");
             descriptor_0x2902 = params->descriptor;
             BLE::Instance().gattClient().terminateCharacteristicDescriptorDiscovery(params->characteristic);
-            state = eFoundCharacteristicDescriptor_0x2902;
+            state = eFoundCharacteristicDescriptor_csc_0x2902;
+        }
+    }
+    else if (state == eDiscoverCharacteristicDescriptors_bat)
+    {
+        DBG("~DiscoveredDescCB(), UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
+        if (params->descriptor.getUUID().getShortUUID() == 0x2902)
+        {
+            FLOW("~DiscoveredDescCB() -> eFoundCharacteristicDescriptor_bat_0x2902\r\n");
+            descriptor_0x2902 = params->descriptor;
+            BLE::Instance().gattClient().terminateCharacteristicDescriptorDiscovery(params->characteristic);
+            state = eFoundCharacteristicDescriptor_bat_0x2902;
         }
     }
 }
@@ -214,53 +235,61 @@ static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryC
 static void DiscoveredDescTerminationCB(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
     DBG("~DiscoveredDescTerminationCB()\r\n");
-    if (state == eFoundCharacteristicDescriptor_0x2902)
+    if (state == eFoundCharacteristicDescriptor_csc_0x2902)
     {
-        FLOW("~DiscoveredDescTerminationCB() [eFoundCharacteristicDescriptor_0x2902] => eRequestNotify\r\n");
+        FLOW("~DiscoveredDescTerminationCB() [eFoundCharacteristicDescriptor_csc_0x2902] => eRequestNotify\r\n");
         state = eRequestNotify;
     }
 }
 
-void DiscoverCharacteristicDescriptors()
+void DiscoverCharacteristicDescriptors_bat()
 {
     if (!BLE::Instance().gattClient().isServiceDiscoveryActive())
     {
-        ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_0x2A5B, DiscoveredDescCB, DiscoveredDescTerminationCB);
-        FLOW("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors, err=0x%x\r\n", err);
-        state = eDiscoverCharacteristicDescriptors;
+//        ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_csc, DiscoveredDescCB, DiscoveredDescTerminationCB);
+        ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_bat, DiscoveredDescCB, DiscoveredDescTerminationCB);
+        FLOW("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors_bat, err=0x%x\r\n", err);
+        state = eDiscoverCharacteristicDescriptors_bat;
+    }
+}
+
+void DiscoverCharacteristicDescriptors_csc()
+{
+    if (!BLE::Instance().gattClient().isServiceDiscoveryActive())
+    {
+        ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_csc, DiscoveredDescCB, DiscoveredDescTerminationCB);
+        FLOW("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors_csc, err=0x%x\r\n", err);
+        state = eDiscoverCharacteristicDescriptors_csc;
     }
 }
 
 void ServiceDiscoveryTerminationCB(Gap::Handle_t handle)
 {
     DBG("~ServiceDiscoveryTerminationCB()\r\n");
-    if (state == eFoundServiceCharacteristic_0x2A5B)
-    {
-        FLOW("~ServiceDiscoveryTerminationCB() [eFoundServiceCharacteristic_0x2A5B] => DiscoverCharacteristicDescriptors()\r\n");
-        DiscoverCharacteristicDescriptors();
-    }
+    FLOW("~ServiceDiscoveryTerminationCB() => DiscoverCharacteristicDescriptors()\r\n");
+    DiscoverCharacteristicDescriptors_csc();
 }
 
-void RequestNotify()
+void RequestNotify(DiscoveredCharacteristicDescriptor& desc, bool enable)
 {
-    if (!BLE::Instance().gattClient().isCharacteristicDescriptorDiscoveryActive(characteristic_0x2A5B))
+    //if (!BLE::Instance().gattClient().isCharacteristicDescriptorDiscoveryActive(characteristic_csc))
     {
-        uint16_t value = BLE_HVX_NOTIFICATION;
+        uint16_t value = enable ? BLE_HVX_NOTIFICATION : 0;
         ble_error_t err = BLE::Instance().gattClient().write(
             GattClient::GATT_OP_WRITE_CMD,
-            descriptor_0x2902.getConnectionHandle(),
-            descriptor_0x2902.getAttributeHandle(),
+            desc.getConnectionHandle(),
+            desc.getAttributeHandle(),
             sizeof(uint16_t),
             (uint8_t *)&value);
-        FLOW("~RequestNotify() ret=0x%x\r\n", err);
+        INFO("~RequestNotify(%d) ret=0x%x\r\n", value, err);
     }
 }
 
-void ReadNotifyStatus()
+void ReadNotifyStatus(DiscoveredCharacteristicDescriptor& desc)
 {
     ble_error_t err = BLE::Instance().gattClient().read(
-        descriptor_0x2902.getConnectionHandle(),
-        descriptor_0x2902.getAttributeHandle(),
+        desc.getConnectionHandle(),
+        desc.getAttributeHandle(),
         0);
     FLOW("~ReadNotifyStatus() ret=0x%x\r\n", err);
 }
@@ -273,6 +302,13 @@ void DataReadCB(const GattReadCallbackParams *params)
         INFO(" %02x", params->data[index]);
     }
     INFO("\r\n");
+
+    if((params->handle == characteristic_bat.getValueHandle()) && (1==params->len))
+    {
+        static int i=0;
+        bat_current = params->data[0];
+        INFO("Got Battery%u: %u\r\n", i++, bat_current);
+    }
 }
 
 void DataWriteCB(const GattWriteCallbackParams *params)
@@ -319,11 +355,13 @@ void hvxCB(const GattHVXCallbackParams *params)
     }
     FLOW("\r\n");
 
+    /*
     if (params->type == BLE_HVX_NOTIFICATION)
     {
         process_data(params->data, params->len);
+        RequestNotify(false);
     }
-    FLOW("\r\n");
+    FLOW("\r\n");*/
 }
 
 static void Connect()
@@ -331,6 +369,14 @@ static void Connect()
     FLOW("~Connect() -> eConnecting\r\n")
     BLE::Instance().gap().connect(device_addr, BLEProtocol::AddressType::PUBLIC, NULL, NULL);
     state = eConnecting;
+}
+
+static void ReadBat()
+{
+    INFO("+ReadBat(), handle=%u\r\n", characteristic_bat.getValueHandle());
+    ble_error_t err = characteristic_bat.read(0);
+    INFO("ReadBat(), err=0x%x\r\n", err);
+
 }
 
 int32_t g_i = 0;
@@ -364,7 +410,7 @@ int main(void)
     ble.init();
     ble.gap().onConnection(ConnectionCB);
     ble.gap().onDisconnection(DisconnectionCB);
-
+#if 0
     Gap::ConnectionParams_t connParams;
     connParams.minConnectionInterval = 0xFFFF; //BLE_GAP_CP_MIN_CONN_INTVL_MIN;
 
@@ -383,6 +429,8 @@ int main(void)
     //ble.gap().setPreferredConnectionParams(&connParams);
 
     ble.gap().setScanParams(500, 400, 0, false);
+    #endif 
+    
     ble.gap().startScan(AdvertisementCB);
 
     ble.gattClient().onHVX(hvxCB);
@@ -404,19 +452,31 @@ int main(void)
             StartServiceDiscovery();
             break;
         case eServiceDiscovery:
+            if (found_char_2a5b_csc && found_char_2a19_bat)
+            {
+                BLE::Instance().gattClient().terminateServiceDiscovery();
+            }
             break;
-        case eFoundServiceCharacteristic_0x2A5B:
-            // Wait for ServiceDiscoveryTerminationCB
+        case eDiscoverCharacteristicDescriptors_csc:
             break;
-        case eDiscoverCharacteristicDescriptors:
+        case eDiscoverCharacteristicDescriptors_bat:
             break;
-        case eFoundCharacteristicDescriptor_0x2902:
+        case eFoundCharacteristicDescriptor_csc_0x2902:
             break;
         case eRequestNotify:
-            RequestNotify();
+            RequestNotify(descriptor_0x2902, true);
             state = eRunning;
+            //ReadBat();
             break;
-        case eRunning:
+        case eRunning: {
+            static uint32_t last_bat_ms = 0;
+            uint32_t now = t.read_ms();
+            if ((now - last_bat_ms) > 1000) {
+                last_bat_ms = now;
+                ReadBat();
+            }
+
+        }
             break;
         case eDisconnected:
             Connect();
