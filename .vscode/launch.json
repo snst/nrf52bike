@@ -1,34 +1,22 @@
-// AUTOMATICALLY GENERATED FILE. PLEASE DO NOT MODIFY IT MANUALLY
-
-// PIO Unified Debugger
-//
-// Documentation: https://docs.platformio.org/page/plus/debugging.html
-// Configuration: https://docs.platformio.org/page/projectconf/section_env_debug.html
-
 {
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
-            "type": "platformio-debug",
+            "name": "GDB",
+            "type": "gdb",
             "request": "launch",
-            "name": "PIO Debug",
-            "executable": "/home/stsc/platformio/nrf52bike/.pioenvs/delta_dfbm_nq620/firmware.elf",
-            "toolchainBinDir": "/home/stsc/.platformio/packages/toolchain-gccarmnoneeabi/bin",
-            "svdPath": "/home/stsc/.platformio/platforms/nordicnrf52/misc/svd/nrf52.svd",
-            "preLaunchTask": {
-                "type": "PlatformIO",
-                "task": "Pre-Debug"
-            },
-            "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "type": "platformio-debug",
-            "request": "launch",
-            "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "/home/stsc/platformio/nrf52bike/.pioenvs/delta_dfbm_nq620/firmware.elf",
-            "toolchainBinDir": "/home/stsc/.platformio/packages/toolchain-gccarmnoneeabi/bin",
-            "svdPath": "/home/stsc/.platformio/platforms/nordicnrf52/misc/svd/nrf52.svd",
-            "internalConsoleOptions": "openOnSessionStart"
+            "cwd": "${workspaceRoot}",
+            "target": "${workspaceRoot}/diggro/s132/armgcc/nrf52832_xxaa.out", 
+            "gdbpath" : "../gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gdb.exe",
+            "autorun": [
+                "target remote localhost:3333",
+                "symbol-file ${workspaceRoot}/diggro/s132/armgcc/nrf52832_xxaa.out",
+                "monitor reset" 
+                ]
         }
     ]
 }
