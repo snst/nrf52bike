@@ -12,6 +12,9 @@
 #include "tracer.h"
 #include "val.h"
 #include "csc.h"
+#include "icons.h"
+
+// https://github.com/jstiefel/esp32_komoot_ble
 
 Serial pc(USBTX, USBRX); // tx, rx
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
@@ -24,9 +27,11 @@ enum state_t
     eConnecting,
     eConnected,
     eServiceDiscovery,
+    eDiscoverCharacteristicDescriptors_komoot,
     eDiscoverCharacteristicDescriptors_csc,
     eDiscoverCharacteristicDescriptors_bat,
     eDiscoverCharacteristicDescriptorsEnd,
+    eFoundCharacteristicDescriptor_komoot_0x2902,
     eFoundCharacteristicDescriptor_csc_0x2902,
     eFoundCharacteristicDescriptor_bat_0x2902,
     eRequestNotify,
@@ -36,17 +41,24 @@ enum state_t
 };
 
 Gap::Handle_t connection_handle_bike = 0xFFFF;
+static DiscoveredCharacteristic characteristic_komoot;
 static DiscoveredCharacteristic characteristic_csc;
 static DiscoveredCharacteristic characteristic_bat;
+static DiscoveredCharacteristicDescriptor descriptor_komoot(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 static DiscoveredCharacteristicDescriptor descriptor_csc(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 static DiscoveredCharacteristicDescriptor descriptor_bat(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0));
 static BLEProtocol::AddressBytes_t device_addr_bike;
+static BLEProtocol::AddressType_t device_addr_type_bike;
 static BLEProtocol::AddressBytes_t device_addr_komoot;
 state_t state = eDeviceDiscovery;
-static bool found_char_csc = false; // 2a5b
-static bool found_char_bat = false; // 2a19
+static bool found_char_komoot = false; //
+static bool found_char_csc = false;    // 2a5b
+static bool found_char_bat = false;    // 2a19
+
+static bool found_desc_komoot = false;
 static bool found_desc_csc = false;
 static bool found_desc_bat = false;
+
 static bool read_bat_result = false;
 static bool have_addr_bike = false;
 static bool have_addr_komoot = false;
@@ -55,30 +67,46 @@ val_uint8_t bat;
 val_uint8_t speed;
 Timer t;
 
-
 void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
 {
-    INFO("~AdvertisementCB peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u.\r\n",
-        params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
-        params->rssi, params->isScanResponse, params->type, params->peerAddrType);
+    if ((params->peerAddr[5] == 0xd4) && (params->peerAddr[4] == 0x3f))
+        return;
+    if ((params->peerAddr[5] == 0x00) && (params->peerAddr[4] == 0x1a))
+        return;
 
-    if (params->peerAddr[5] == 0xf4)
+    INFO("~AdvertisementCB peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u.\r\n",
+         params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
+         params->rssi, params->isScanResponse, params->type, params->peerAddrType);
+
+    //if (params->peerAddr[5] == 0xf4)
     {
         INFO("  -> found bike\r\n");
         memcpy(&device_addr_bike, &params->peerAddr, sizeof(device_addr_bike));
+        device_addr_type_bike = params->addressType;
         have_addr_bike = true;
     }
 
-    if(have_addr_bike) {
+    if (params->peerAddr[5] == 0x58 || params->peerAddr[0] == 0x58)
+    {
+        INFO("  -> found komoot\r\n");
+        memcpy(&device_addr_bike, &params->peerAddr, sizeof(device_addr_bike));
+        have_addr_komoot = true;
+    }
+
+    if (have_addr_bike)
+    {
         BLE::Instance().stopScan();
         state = eFoundDevice;
     }
-
 }
 
 void ServiceDiscoveryCB(const DiscoveredService *service)
 {
-    DBG("~ServiceDiscoveryCB()\r\n");
+    DBG("~ServiceDiscoveryCB() UUID-%x\r\n", service->getUUID().getShortUUID());
+    DBG("~ServiceDiscoveryCB() LONG-%x %x %x %x %x\r\n", service->getUUID().getBaseUUID()[0], service->getUUID().getBaseUUID()[1], service->getUUID().getBaseUUID()[2], service->getUUID().getBaseUUID()[3], service->getUUID().getBaseUUID()[4]
+
+    );
+    // komoot UUID-e128
 }
 
 void ReadCB(const GattReadCallbackParams *params)
@@ -89,7 +117,17 @@ void ReadCB(const GattReadCallbackParams *params)
 void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
 {
     FLOW("~ServiceCharacteristicsCB() UUID-%x valueHandle=%u, declHandle=%u, props[%x]\r\n", param->getUUID().getShortUUID(), param->getValueHandle(), param->getDeclHandle(), (uint8_t)param->getProperties().broadcast());
-    if (param->getUUID().getShortUUID() == 0x2A5B)
+    DBG("~ServiceCharacteristicsCB() LONG-%x %x %x %x %x\r\n", param->getUUID().getBaseUUID()[0], param->getUUID().getBaseUUID()[1], param->getUUID().getBaseUUID()[2], param->getUUID().getBaseUUID()[3], param->getUUID().getBaseUUID()[4]
+
+    );
+
+    if (param->getUUID().getShortUUID() == 0xd605)
+    {
+        INFO(" -> found_char_komoot\r\n");
+        characteristic_komoot = *param;
+        found_char_komoot = true;
+    }
+    else if (param->getUUID().getShortUUID() == 0x2A5B)
     {
         INFO(" -> found_char_csc\r\n");
         characteristic_csc = *param;
@@ -105,7 +143,18 @@ void ServiceCharacteristicsCB(const DiscoveredCharacteristic *param)
 
 static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryCallbackParams_t *params)
 {
-    if (state == eDiscoverCharacteristicDescriptors_csc)
+    if (state == eDiscoverCharacteristicDescriptors_komoot)
+    {
+        DBG("~DiscoveredDescCB() komoot, UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
+        if (params->descriptor.getUUID().getShortUUID() == 0x2902)
+        {
+            DBG("  -> eFoundCharacteristicDescriptor_komoot_0x2902\r\n");
+            descriptor_komoot = params->descriptor;
+            BLE::Instance().gattClient().terminateCharacteristicDescriptorDiscovery(params->characteristic);
+            state = eFoundCharacteristicDescriptor_komoot_0x2902;
+        }
+    }
+    else if (state == eDiscoverCharacteristicDescriptors_csc)
     {
         DBG("~DiscoveredDescCB(), UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
         if (params->descriptor.getUUID().getShortUUID() == 0x2902)
@@ -132,7 +181,8 @@ static void DiscoveredDescCB(const CharacteristicDescriptorDiscovery::DiscoveryC
 static void DiscoverCharacteristicDescriptorsEndCB(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
     DBG("~DiscoverCharacteristicDescriptorsEndCB()\r\n");
-    if (state == eFoundCharacteristicDescriptor_csc_0x2902)
+    //    if (state == eFoundCharacteristicDescriptor_csc_0x2902)
+    if (state == eFoundCharacteristicDescriptor_komoot_0x2902)
     {
         state = eDiscoverCharacteristicDescriptorsEnd;
     }
@@ -158,13 +208,24 @@ void DiscoverCharacteristicDescriptors_csc()
     }
 }
 
+void DiscoverCharacteristicDescriptors_komoot()
+{
+    if (!BLE::Instance().gattClient().isServiceDiscoveryActive())
+    {
+        ble_error_t err = BLE::Instance().gattClient().discoverCharacteristicDescriptors(characteristic_komoot, DiscoveredDescCB, DiscoverCharacteristicDescriptorsEndCB);
+        FLOW("~DiscoverCharacteristicDescriptors() -> eDiscoverCharacteristicDescriptors_komoot, err=0x%x\r\n", err);
+        state = eDiscoverCharacteristicDescriptors_komoot;
+    }
+}
+
 void ServiceDiscoveryTerminationCB(Gap::Handle_t handle)
 {
     DBG("~ServiceDiscoveryTerminationCB()\r\n");
-    DiscoverCharacteristicDescriptors_csc();
+    //    DiscoverCharacteristicDescriptors_csc();
+    DiscoverCharacteristicDescriptors_komoot();
 }
 
-void RequestNotify(DiscoveredCharacteristicDescriptor& desc, bool enable)
+void RequestNotify(DiscoveredCharacteristicDescriptor &desc, bool enable)
 {
     uint16_t value = enable ? BLE_HVX_NOTIFICATION : 0;
     ble_error_t err = BLE::Instance().gattClient().write(
@@ -176,7 +237,7 @@ void RequestNotify(DiscoveredCharacteristicDescriptor& desc, bool enable)
     DBG("~RequestNotify(%d) attrHandle=%u, ret=0x%x\r\n", value, desc.getAttributeHandle(), err);
 }
 
-void ReadNotifyStatus(DiscoveredCharacteristicDescriptor& desc)
+void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc)
 {
     ble_error_t err = BLE::Instance().gattClient().read(
         desc.getConnectionHandle(),
@@ -194,9 +255,9 @@ void DataReadCB(const GattReadCallbackParams *params)
     }
     FLOW("\r\n");
 
-    if((params->handle == characteristic_bat.getValueHandle()) && (1==params->len))
+    if ((params->handle == characteristic_bat.getValueHandle()) && (1 == params->len))
     {
-        static int i=0;
+        static int i = 0;
         bat.current = params->data[0];
         INFO("Got Battery #%u: %u\r\n", i++, bat.current);
         read_bat_result = true;
@@ -246,7 +307,6 @@ void hvxCB(const GattHVXCallbackParams *params)
     }
     FLOW("\r\n");
 
-    
     if ((params->type == BLE_HVX_NOTIFICATION) && (params->handle == characteristic_csc.getValueHandle()))
     {
         process_csc_data(params->data, params->len, t, speed);
@@ -256,7 +316,7 @@ void hvxCB(const GattHVXCallbackParams *params)
 static void Connect()
 {
     FLOW("~Connect()\r\n")
-    BLE::Instance().gap().connect(device_addr_bike, BLEProtocol::AddressType::PUBLIC, NULL, NULL);
+    BLE::Instance().gap().connect(device_addr_bike, device_addr_type_bike, NULL, NULL);
     state = eConnecting;
 }
 
@@ -266,7 +326,6 @@ static void ReadBat()
     ble_error_t err = characteristic_bat.read(0);
     DBG("ReadBat(), err=0x%x\r\n", err);
     state = eReadBat;
-
 }
 
 int main(void)
@@ -289,15 +348,35 @@ int main(void)
     ble.init();
     ble.gap().onConnection(ConnectionCB);
     ble.gap().onDisconnection(DisconnectionCB);
-    
+
+    ble.gap().setScanParams(400, 400, 0, true);
     ble.gap().startScan(AdvertisementCB);
 
     ble.gattClient().onHVX(hvxCB);
     ble.gattClient().onDataRead(DataReadCB);
     ble.gattClient().onDataWrite(DataWriteCB);
 
+    uint32_t lms = t.read_ms();
+    uint8_t ic = 0;
+
     while (true)
     {
+        uint32_t now = t.read_ms();
+        if (now - lms > 1000)
+        {
+            lms = now;
+            const uint8_t* ptr;
+            do {
+                ptr = GetNavIcon(ic);
+                ic++;
+            } while(!ptr);
+            if (ptr)
+            {
+                tft.fillScreen(ST77XX_BLACK);
+                tft.drawXBitmap(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
+            }
+        }
+
         switch (state)
         {
         case eDeviceDiscovery:
@@ -308,14 +387,18 @@ int main(void)
         case eConnecting:
             break;
         case eConnected:
-            if(!found_char_csc || !found_char_bat) {
+            if (!found_char_csc || !found_char_bat)
+            {
                 StartServiceDiscovery();
-            } else {
+            }
+            else
+            {
                 state = eRequestNotify;
             }
             break;
         case eServiceDiscovery:
-            if (found_char_csc && found_char_bat)
+            //            if (found_char_csc && found_char_bat)
+            if (found_char_komoot)
             {
                 BLE::Instance().gattClient().terminateServiceDiscovery();
             }
@@ -327,20 +410,24 @@ int main(void)
         case eFoundCharacteristicDescriptor_csc_0x2902:
             break;
         case eDiscoverCharacteristicDescriptorsEnd:
-            ReadBat();
+            RequestNotify(descriptor_komoot, true);
+            state = eRunning;
+            //ReadBat();
             break;
         case eReadBat:
-            if(read_bat_result) {
+            if (read_bat_result)
+            {
                 state = eRequestNotify;
             }
-        break;
+            break;
         case eRequestNotify:
             RequestNotify(descriptor_csc, true);
             state = eRunning;
             break;
-        case eRunning: {
+        case eRunning:
+        {
         }
-            break;
+        break;
         case eDisconnected:
             Connect();
             break;
@@ -348,7 +435,7 @@ int main(void)
 
         if (new_val(speed))
         {
-            tft.fillRect(0,0,80,50, ST77XX_BLACK);
+            tft.fillRect(0, 0, 80, 50, ST77XX_BLACK);
             tft.setCursor(10, 40);
             tft.printf("%d", speed.shown);
         }
