@@ -801,6 +801,33 @@ void Adafruit_GFX::drawXBitmap(int16_t x, int16_t y,
     endWrite();
 }
 
+void Adafruit_GFX::drawXBitmap2(int16_t x, int16_t y,
+  const uint8_t bitmap[], int16_t w, int16_t h, uint16_t color) {
+
+    int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
+    uint8_t byte = 0;
+    uint16_t* buf = (uint16_t*) malloc(w*2);
+    if(buf) {
+        
+    //startWrite();
+        for(int16_t j=0; j<h; j++, y++) {
+            for(int16_t i=0; i<w; i++ ) {
+                if(i & 7) byte >>= 1;
+                else      byte   = pgm_read_byte(&bitmap[j * byteWidth + i / 8]);
+                // Nearly identical to drawBitmap(), only the bit order
+                // is reversed here (left-to-right = LSB to MSB):
+                if(byte & 0x01) {
+                    buf[i] = color;
+                } else {
+                    buf[i] = 0;
+                }
+            }
+            drawBuffer(x,y,(uint8_t*) buf, w);
+        }
+        free(buf);
+    }
+    //endWrite();
+}
 
 /**************************************************************************/
 /*!

@@ -372,8 +372,8 @@ int main(void)
             } while(!ptr);
             if (ptr)
             {
-                tft.fillScreen(ST77XX_BLACK);
-                tft.drawXBitmap(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
+                //tft.fillScreen(ST77XX_BLACK);
+                tft.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
             }
         }
 

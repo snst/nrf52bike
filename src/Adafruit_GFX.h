@@ -16,7 +16,7 @@ class Adafruit_GFX : public Stream {
 
   // This MUST be defined by the subclass:
   virtual void drawPixel(int16_t x, int16_t y, uint16_t color) = 0;    ///< Virtual drawPixel() function to draw to the screen/framebuffer/etc, must be overridden in subclass. @param x X coordinate.  @param y Y coordinate. @param color 16-bit pixel color. 
-
+  virtual void drawBuffer(int16_t x, int16_t y, uint8_t* buf, int16_t w) = 0;
   // TRANSACTION API / CORE DRAW API
   // These MAY be overridden by the subclass to provide device-specific
   // optimized code.  Otherwise 'generic' versions are used.
@@ -73,6 +73,9 @@ class Adafruit_GFX : public Stream {
       int16_t w, int16_t h, uint16_t color, uint16_t bg),
     drawXBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
       int16_t w, int16_t h, uint16_t color),
+    drawXBitmap2(int16_t x, int16_t y, const uint8_t bitmap[],
+      int16_t w, int16_t h, uint16_t color),
+
     drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
       int16_t w, int16_t h),
     drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t *bitmap,
