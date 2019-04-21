@@ -14,12 +14,17 @@
 #include "csc.h"
 #include "komoot.h"
 #include "icons.h"
+#include "gap/AdvertisingDataParser.h"
 
 // https://github.com/jstiefel/esp32_komoot_ble
 
 Serial pc(USBTX, USBRX); // tx, rx
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
 //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
+
+#define GAT_SERVICE_CSCS (0x1816u)
+#define GAT_SERVICE_BAT (0x180Fu)
+const uint8_t GAT_SERVICE_KOMOOT[] = {0x71, 0xC1, 0xE1, 0x28, 0xD9, 0x2F, 0x4F, 0xA8, 0xA2, 0xB2, 0x0F, 0x17, 0x1D, 0xB3, 0x43, 0x6C};
 
 enum state_t
 {
@@ -72,6 +77,38 @@ Timer t;
 
 DigitalOut display_led((PinName)11);
 
+bool HasServiceId(mbed::Span<const uint8_t> &data, uint16_t id)
+{
+    //INFO("FIELD len: %u\r\n", data.size());
+    const uint8_t *p = data.data();
+    uint32_t val;
+    for (size_t i = 0; i < data.size() / sizeof(id); i++)
+    {
+        val = *p++;
+        val |= (*p++ << 8);
+        if (val == id)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool IsServiceId128(mbed::Span<const uint8_t> &data, const uint8_t id[])
+{
+    if (data.size() < 16)
+        return false;
+
+    const uint8_t *p = data.data();
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        if (p[i] != id[15 - i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
 {
@@ -80,16 +117,46 @@ void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
     if ((params->peerAddr[5] == 0x00) && (params->peerAddr[4] == 0x1a))
         return;
 
-    INFO("~AdvertisementCB peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u.\r\n",
+    INFO("~AdvertisementCB peerAddr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, AdvertisementType %u, peerAddrType %u, len=%u.\r\n",
          params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
-         params->rssi, params->isScanResponse, params->type, params->peerAddrType);
+         params->rssi, params->isScanResponse, params->type, params->peerAddrType, params->advertisingDataLen);
 
+    mbed::Span<const uint8_t> ad(params->advertisingData, params->advertisingDataLen);
+
+    ble::AdvertisingDataParser adv_parser(ad);
+
+    while (adv_parser.hasNext())
+    {
+        ble::AdvertisingDataParser::element_t field = adv_parser.next();
+        if ((field.type == ble::adv_data_type_t::INCOMPLETE_LIST_16BIT_SERVICE_IDS) || (field.type == ble::adv_data_type_t::COMPLETE_LIST_16BIT_SERVICE_IDS))
+        {
+            if (HasServiceId(field.value, GAT_SERVICE_BAT))
+                INFO("==> BAT\r\n");
+            if (HasServiceId(field.value, GAT_SERVICE_CSCS))
+                INFO("==> CSCS\r\n");
+        }
+
+        if ((field.type == ble::adv_data_type_t::INCOMPLETE_LIST_128BIT_SERVICE_IDS) || (field.type == ble::adv_data_type_t::COMPLETE_LIST_128BIT_SERVICE_IDS))
+        {
+            if (IsServiceId128(field.value, GAT_SERVICE_KOMOOT))
+                INFO("==> KOMOOT\r\n");
+        }
+
+        /*
+                if (field.type != ble::adv_data_type_t::FLAGS ||
+                field.value.size() != 1 ||
+                !(field.value[0] & GapAdvertisingData::LE_GENERAL_DISCOVERABLE)) {
+                continue;
+            }*/
+    }
+
+    /*
     //if (params->peerAddr[5] == 0xf4)
     {
         INFO("  -> found bike\r\n");
         memcpy(&device_addr_bike, &params->peerAddr, sizeof(device_addr_bike));
         device_addr_type_bike = params->addressType;
-        have_addr_bike = true;
+     //   have_addr_bike = true;
     }
 
     if (params->peerAddr[5] == 0x58 || params->peerAddr[0] == 0x58)
@@ -104,6 +171,7 @@ void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
         BLE::Instance().stopScan();
         state = eFoundDevice;
     }
+    */
 }
 
 void ServiceDiscoveryCB(const DiscoveredService *service)
@@ -463,8 +531,6 @@ int main(void)
             tft.fillRect(0, 80, 80, 50, ST77XX_BLACK);
             tft.setCursor(10, 120);
             tft.printf("%d", komoot_dist.shown);
-
-
         }
         if (new_val(speed))
         {
