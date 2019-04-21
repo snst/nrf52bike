@@ -70,6 +70,9 @@ val_uint8_t komoot_dir;
 val_uint32_t komoot_dist;
 Timer t;
 
+DigitalOut display_led((PinName)11);
+
+
 void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
 {
     if ((params->peerAddr[5] == 0xd4) && (params->peerAddr[4] == 0x3f))
@@ -460,6 +463,7 @@ int main(void)
             tft.fillRect(0, 80, 80, 50, ST77XX_BLACK);
             tft.setCursor(10, 120);
             tft.printf("%d", komoot_dist.shown);
+
 
         }
         if (new_val(speed))
