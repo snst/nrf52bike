@@ -12,6 +12,7 @@
 #include "tracer.h"
 #include "val.h"
 #include "csc.h"
+#include "komoot.h"
 #include "icons.h"
 
 // https://github.com/jstiefel/esp32_komoot_ble
@@ -65,6 +66,8 @@ static bool have_addr_komoot = false;
 
 val_uint8_t bat;
 val_uint8_t speed;
+val_uint8_t komoot_dir;
+val_uint32_t komoot_dist;
 Timer t;
 
 void AdvertisementCB(const Gap::AdvertisementCallbackParams_t *params)
@@ -298,6 +301,8 @@ void DisconnectionCB(const Gap::DisconnectionCallbackParams_t *param)
     state = eDisconnected;
 }
 
+uint8_t street[32];
+
 void hvxCB(const GattHVXCallbackParams *params)
 {
     FLOW("~hvxCB(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
@@ -307,9 +312,16 @@ void hvxCB(const GattHVXCallbackParams *params)
     }
     FLOW("\r\n");
 
-    if ((params->type == BLE_HVX_NOTIFICATION) && (params->handle == characteristic_csc.getValueHandle()))
+    if (params->type == BLE_HVX_NOTIFICATION)
     {
-        process_csc_data(params->data, params->len, t, speed);
+        if (params->handle == characteristic_csc.getValueHandle())
+        {
+            process_csc_data(params->data, params->len, t, speed);
+        }
+        else if (params->handle == characteristic_komoot.getValueHandle())
+        {
+            process_komoot_data(params->data, params->len, komoot_dir, komoot_dist, (uint8_t *)street, sizeof(street));
+        }
     }
 }
 
@@ -361,22 +373,24 @@ int main(void)
 
     while (true)
     {
+        /*
         uint32_t now = t.read_ms();
         if (now - lms > 1000)
         {
             lms = now;
-            const uint8_t* ptr;
-            do {
+            const uint8_t *ptr;
+            do
+            {
                 ptr = GetNavIcon(ic);
                 ic++;
-            } while(!ptr);
+            } while (!ptr);
             if (ptr)
             {
                 //tft.fillScreen(ST77XX_BLACK);
                 tft.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
             }
         }
-
+*/
         switch (state)
         {
         case eDeviceDiscovery:
@@ -433,6 +447,21 @@ int main(void)
             break;
         }
 
+        if (new_val(komoot_dir))
+        {
+            const uint8_t *ptr = GetNavIcon(komoot_dir.shown);
+            if (ptr)
+            {
+                tft.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
+            }
+        }
+        if (new_val32(komoot_dist))
+        {
+            tft.fillRect(0, 80, 80, 50, ST77XX_BLACK);
+            tft.setCursor(10, 120);
+            tft.printf("%d", komoot_dist.shown);
+
+        }
         if (new_val(speed))
         {
             tft.fillRect(0, 0, 80, 50, ST77XX_BLACK);
