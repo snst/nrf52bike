@@ -6,33 +6,21 @@
 
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
+#include "gfxfont.h"
+#include "FreeMonoBold24pt7b.h"
+#include <Adafruit_ST7735.h>
 #include "tracer.h"
 #include "val.h"
 #include "csc.h"
 #include "komoot.h"
+#include "icons.h"
 #include "gap/AdvertisingDataParser.h"
-#include "BLEAppBase.h"
-#include "BLEManager.h"
-#include "BikeGui.h"
 
 // https://github.com/jstiefel/esp32_komoot_ble
 
 Serial pc(USBTX, USBRX); // tx, rx
-
-int main(void)
-{
-    INFO("+main()\r\n");
-    BLE &ble = BLE::Instance();
-    BikeGUI gui;
-    BLEManager mgr(ble, &gui);
-    mgr.Start();
-
-    return 0;
-}
-
-
-
-#if 0
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
+//PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
 
 #define GAT_SERVICE_CSCS (0x1816u)
 #define GAT_SERVICE_BAT (0x180Fu)
@@ -620,4 +608,3 @@ int main(void)
         ble.waitForEvent();
     }
 }
-#endif

@@ -1,7 +1,7 @@
 #ifndef TRACER_H
 #define TRAVER_H
 
-#define ENABLE_DEBUG_PRINT
+//#define ENABLE_DEBUG_PRINT
 #define ENABLE_FLOW_PRINT
 #define ENABLE_INFO_PRINT
 
