@@ -16,10 +16,13 @@
 #include "ble/FunctionPointerWithContext.h"
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
+#include "IAppCallback.h"
 
 #include "tracer.h"
 
 class BikeGUI;
+
+#define MAX_NAME (7u)
 
 class BLEAppBase : private mbed::NonCopyable<BLEAppBase>
 {
@@ -39,22 +42,24 @@ protected:
   uint16_t characteristic_id;
   bool found_characteristic;
   bool found_desc2902_;
-  bool found_device;
+  bool found_device_;
   Timer &timer_;
   BikeGUI *gui_;
   IAppCallback* app_callback_;
+  char name_[MAX_NAME+1];
 
 public:
-  BLEAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) : event_queue_(event_queue),
+  BLEAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, char* name) : event_queue_(event_queue),
                                                                                   timer_(timer),
                                                                                   ble_(ble_interface),
                                                                                   _post_init_cb(),
                                                                                   desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
                                                                                   found_characteristic(false),
                                                                                   found_desc2902_(false),
-                                                                                  found_device(false), 
+                                                                                  found_device_(false), 
                                                                                   app_callback_(NULL)
   {
+    strcpy(name_, name);
   }
 
   virtual ~BLEAppBase()
@@ -73,6 +78,11 @@ public:
     return makeFunctionPointer(this, member);
   }
 
+  bool HaveFoundDevice()
+  {
+    return found_device_;
+  }
+
   const Gap::Handle_t &GetConnectionHandle()
   {
     return connection_handle_;
@@ -80,9 +90,9 @@ public:
 
   bool Connect()
   {
-    INFO("~BLEAppBase::Connect() found_device=%d\r\n", found_device);
-    if(found_device) {
-      ble_.gap().connect(device_addr_, device_addr_type_, NULL, NULL);
+    if(found_device_) {
+      ble_error_t err = ble_.gap().connect(device_addr_, device_addr_type_, NULL, NULL);
+      INFO("~BLEAppBase::Connect() => %s, err=0x%x\r\n", name_, err);
       return true;
     }
     return false;
@@ -91,7 +101,7 @@ public:
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params)
   {
     connection_handle_ = params->handle;
-    INFO("~BLEAppBase::OnConnected() handle=0x%x\r\n", connection_handle_);
+    FLOW("~BLEAppBase::OnConnected() => %s, handle=0x%x\r\n", name_, connection_handle_);
     if (!FoundCharacteristic())
     {
       StartServiceDiscovery();
@@ -104,23 +114,24 @@ public:
 
   void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
   {
-    INFO("~BLEAppBase::OnDisconnected() handle=0x%x, reason=0x%x\r\n", param->handle, param->reason);
+    INFO("~BLEAppBase::OnDisconnected() => %s, handle=0x%x, reason=0x%x\r\n", name_, param->handle, param->reason);
     connection_handle_ = 0xFFFF;
+    event_queue_.call_in(500, mbed::callback(this, &BLEAppBase::Connect));
   }
 
   virtual void OnServiceFound(const DiscoveredService *service)
   {
-    DBG("~BLEAppBase::OnServiceFound() UUID-%x\r\n", service->getUUID().getShortUUID());
-    DBG("~BLEAppBase::OnServiceFound() LONG-%x %x %x %x %x\r\n", service->getUUID().getBaseUUID()[0], service->getUUID().getBaseUUID()[1], service->getUUID().getBaseUUID()[2], service->getUUID().getBaseUUID()[3], service->getUUID().getBaseUUID()[4]);
+    DBG("~BLEAppBase::OnServiceFound() => %s UUID-%x\r\n", name_, service->getUUID().getShortUUID());
+    //DBG("~BLEAppBase::OnServiceFound() LONG-%x %x %x %x %x\r\n", service->getUUID().getBaseUUID()[0], service->getUUID().getBaseUUID()[1], service->getUUID().getBaseUUID()[2], service->getUUID().getBaseUUID()[3], service->getUUID().getBaseUUID()[4]);
   }
 
   virtual void OnServiceCharacteristicFound(const DiscoveredCharacteristic *param)
   {
-    DBG("~BLEAppBase::OnServiceCharacteristicFound() UUID-%x valueHandle=%u, declHandle=%u, props[%x]\r\n", param->getUUID().getShortUUID(), param->getValueHandle(), param->getDeclHandle(), (uint8_t)param->getProperties().broadcast());
-    DBG("~BLEAppBase::OnServiceCharacteristicFound() LONG-%x %x %x %x %x\r\n", param->getUUID().getBaseUUID()[0], param->getUUID().getBaseUUID()[1], param->getUUID().getBaseUUID()[2], param->getUUID().getBaseUUID()[3], param->getUUID().getBaseUUID()[4]);
+    DBG("~BLEAppBase::OnServiceCharacteristicFound() => %s, UUID-%x valueHandle=%u, declHandle=%u, props[%x]\r\n", name_, param->getUUID().getShortUUID(), param->getValueHandle(), param->getDeclHandle(), (uint8_t)param->getProperties().broadcast());
+    //DBG("~BLEAppBase::OnServiceCharacteristicFound() LONG-%x %x %x %x %x\r\n", param->getUUID().getBaseUUID()[0], param->getUUID().getBaseUUID()[1], param->getUUID().getBaseUUID()[2], param->getUUID().getBaseUUID()[3], param->getUUID().getBaseUUID()[4]);
     if (param->getUUID().getShortUUID() == characteristic_id)
     {
-      INFO("BLEAppBase:: -> characteristic 0x%x\r\n", characteristic_id);
+      INFO("BLEAppBase:: => %s -> characteristic 0x%x\r\n", name_, characteristic_id);
       characteristic_ = *param;
       found_characteristic = true;
     }
@@ -128,7 +139,7 @@ public:
 
   virtual void OnServiceDiscoveryFinished(Gap::Handle_t handle)
   {
-    FLOW("~OnServiceDiscoveryFinished()\r\n");
+    FLOW("~OnServiceDiscoveryFinished() => %s\r\n", name_);
 
     if (!FoundDescNotify())
     {
@@ -151,12 +162,12 @@ public:
         as_cb(&Self::OnServiceFound),
         as_cb(&Self::OnServiceCharacteristicFound));
 
-    INFO("~BLEAppBase::StartServiceDiscovery(), err=0x%x\r\n", error);
+    INFO("~BLEAppBase::StartServiceDiscovery() => %s, err=0x%x\r\n", name_, error);
   }
 
   virtual void OnCharacteristicDescriptorsFound(const CharacteristicDescriptorDiscovery::DiscoveryCallbackParams_t *params)
   {
-    DBG("~BLEAppBase::OnCharacteristicDescriptorsFound(), UUID %x\r\n", params->descriptor.getUUID().getShortUUID());
+    DBG("~BLEAppBase::OnCharacteristicDescriptorsFound() => %s, UUID %x\r\n", name_, params->descriptor.getUUID().getShortUUID());
     if (params->descriptor.getUUID().getShortUUID() == 0x2902)
     {
       DBG("BLEAppBase::  ->  found 0x2902\r\n");
@@ -168,7 +179,7 @@ public:
 
   virtual void OnAppReady() 
   {
-    DBG("~BLEAppBase::OnAppReady()\r\n");
+    INFO("~BLEAppBase::OnAppReady() => %s\r\n", name_);
     if (NULL != app_callback_)
     {
       app_callback_->OnAppReady(this);
@@ -177,14 +188,14 @@ public:
 
   virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
   {
-    DBG("~BLEAppBase::OnCharacteristicDescriptorsFinished()\r\n");
+    DBG("~BLEAppBase::OnCharacteristicDescriptorsFinished() => %s\r\n", name_);
     OnAppReady();
   }
 
   virtual void StartCharacteristicDescriptorsDiscovery(DiscoveredCharacteristic &characteristic)
   {
     ble_error_t err = ble_.gattClient().discoverCharacteristicDescriptors(characteristic, as_cb(&Self::OnCharacteristicDescriptorsFound), as_cb(&Self::OnCharacteristicDescriptorsFinished));
-    FLOW("~BLEAppBase::StartCharacteristicDescriptorsDiscovery() err=0x%x\r\n", err);
+    FLOW("~BLEAppBase::StartCharacteristicDescriptorsDiscovery() => %s, err=0x%x\r\n", name_, err);
   }
 
   virtual void RequestNotify(bool enable)
@@ -196,7 +207,7 @@ public:
         desc2902_.getAttributeHandle(),
         sizeof(uint16_t),
         (uint8_t *)&value);
-    DBG("~BLEAppBase::RequestNotify(%d) attrHandle=%u, ret=0x%x\r\n", value, desc2902_.getAttributeHandle(), err);
+    DBG("~BLEAppBase::RequestNotify(%d) => %s, attrHandle=%u, ret=0x%x\r\n", value, name_, desc2902_.getAttributeHandle(), err);
   }
 
   void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc) {}
@@ -216,7 +227,7 @@ public:
   {
     memcpy(&device_addr_, &params->peerAddr, sizeof(device_addr_));
     device_addr_type_ = params->addressType;
-    found_device = true;
+    found_device_ = true;
   }
 
   bool HasAddress(const BLEProtocol::AddressBytes_t &peerAddr)

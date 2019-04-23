@@ -23,6 +23,7 @@ public:
   virtual void OnInitDone();
   virtual void OnScanStopped();
   virtual void OnAppReady(BLEAppBase* app);
+  void CheckScanStop();
 };
 
 #endif

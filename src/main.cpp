@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include "tracer.h"
 #include "BLEManager.h"
-#include "BikeGui.h"
+#include "BikeGUI.h"
 
 Serial pc(USBTX, USBRX); // tx, rx
 

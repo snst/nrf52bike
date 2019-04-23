@@ -26,8 +26,8 @@ class BikeGUI : public ICscGUI, public IKomootGUI
     uint8_t csc_bat_;
     uint16_t csc_speed_;
     uint16_t csc_cadence_;
-    uint8_t komoot_dir_;
-    uint32_t komoot_dist_;
+    uint8_t komoot_direction_;
+    uint32_t komoot_distance_;
     uint8_t komoot_street_[MAX_KOMOOT_STREET_LEN];
 
     void ShowValue(uint8_t x, uint8_t y, uint32_t value);

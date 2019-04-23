@@ -1,34 +1,17 @@
-#include "BLEAppCsc.h"
-#include "ICscGui.h"
+#include "BLEAppCSC.h"
+#include "BikeGUI.h"
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
 
-BLEAppCSC::BLEAppCSC(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) : BLEAppBase(event_queue, timer, ble_interface)
+BLEAppCSC::BLEAppCSC(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) 
+: BLEAppBase(event_queue, timer, ble_interface, "CSC")
 {
     FindCharacteristic(0x2A5B);
 }
 
 BLEAppCSC::~BLEAppCSC()
 {
-}
-
-void BLEAppCSC::OnConnected(const Gap::ConnectionCallbackParams_t *params)
-{
-    BLEAppBase::OnConnected(params);
-    INFO("~BLEAppCSC::OnConnected() => CSC\r\n");
-}
-
-void BLEAppCSC::OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
-{
-    BLEAppBase::OnDisconnected(param);
-    INFO("~BLEAppCSC::OnDisconnected() handle=0x%x, reason=0x%x\r\n", param->handle, param->reason);
-    event_queue_.call(mbed::callback(this, &BLEAppBase::Connect));
-}
-
-void BLEAppCSC::OnServiceDiscoveryFinished(Gap::Handle_t handle)
-{
-    BLEAppBase::OnServiceDiscoveryFinished(handle);
 }
 
 void BLEAppCSC::OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)

@@ -7,11 +7,8 @@
 class BLEAppKomoot : public BLEAppBase
 {
   public:
-    BLEAppKomoot(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) : BLEAppBase(event_queue, timer, ble_interface);
+    BLEAppKomoot(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface);
     virtual ~BLEAppKomoot();
-    virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
-    virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
-    virtual void OnServiceDiscoveryFinished(Gap::Handle_t handle);
     virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params);
     void UpdateGUI();
     void ProcessData(const uint8_t *data, uint32_t len);

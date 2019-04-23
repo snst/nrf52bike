@@ -34,6 +34,9 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     BLE &ble_;
     Timer timer_;
     BikeGUI *gui_;
+    bool scanning_active_;
+    uint32_t start_scan_ms_;
+
 
     template <typename ContextType>
     FunctionPointerWithContext<ContextType> as_cb(
@@ -42,11 +45,11 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
         return makeFunctionPointer(this, member);
     }
 
-    virtual void OnAppReady(BLEAppBase* app)
+    virtual void OnAppReady(BLEAppBase *app)
     {
         INFO("~BLEManagerBase::OnAppReady() app=%p\r\n", app);
     }
-/*
+    /*
     void Connect(BLEProtocol::AddressBytes_t &device_addr, BLEProtocol::AddressType_t &device_addr_type)
     {
         INFO("~BLEManagerBase::Connect()\r\n");
@@ -56,9 +59,6 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params)
     {
         FLOW("~BLEManagerBase::OnConnected() handle=0x%x\r\n", params->handle);
-        if (params->role == Gap::CENTRAL)
-        {
-        }
     }
 
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
@@ -91,9 +91,9 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
 
     void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params)
     {
-        INFO("~BLEManagerBase::OnAdvertisement addr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, advType %u, addrType %u, len=%u.\r\n",
-             params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
-             params->rssi, params->isScanResponse, params->type, params->peerAddrType, params->advertisingDataLen);
+        DBG("~BLEManagerBase::OnAdvertisement addr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, advType %u, addrType %u, len=%u.\r\n",
+            params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
+            params->rssi, params->isScanResponse, params->type, params->peerAddrType, params->advertisingDataLen);
 
         mbed::Span<const uint8_t> ad(params->advertisingData, params->advertisingDataLen);
 
@@ -124,31 +124,51 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
         }
     }
 
+
+    bool IsScanActive()
+    {
+        return scanning_active_;
+    }
+
     void StartScan(uint32_t timeout = 0)
     {
-        INFO("~BLEManagerBase::StartScan(), timeout=%u\r\n", timeout);
-        ble_.gap().setScanParams(400, 400, 0, true);
-        ble_.gap().startScan(this, &BLEManagerBase::OnAdvertisement);
-        if (timeout > 0) {
-            event_queue_.call_in(timeout, mbed::callback(this, &BLEManagerBase::StopScan))
+        INFO("~BLEManagerBase::StartScan(), timeout=%u, active=%d\r\n", timeout, scanning_active_);
+        if (!scanning_active_)
+        {
+            start_scan_ms_ = timer_.read_ms();
+            scanning_active_ = true;
+            ble_.gap().setScanParams(400, 400, 0, true);
+            ble_.gap().startScan(this, &BLEManagerBase::OnAdvertisement);
+        /*    if (timeout > 0)
+            {
+                event_queue_.call_in(timeout, mbed::callback(this, &BLEManagerBase::OnScanTimeout));
+            }*/
         }
+    }
+
+    uint32_t GetScanTimeMs()
+    {
+        return timer_.read_ms() - start_scan_ms_;
     }
 
     void StopScan()
     {
-        INFO("~BLEManagerBase::StopScan()\r\n");
-        ble_.stopScan();
-//        event_queue_.call(mbed::callback(this, &BLEManagerBase::OnScanStopped))
-        OnScanStopped();
+        INFO("~BLEManagerBase::StopScan() active=%d\r\n", scanning_active_);
+        if (scanning_active_)
+        {
+            scanning_active_ = false;
+            ble_.stopScan();
+            event_queue_.call_in(100, mbed::callback(this, &BLEManagerBase::OnScanStopped));
+        }
     }
 
-    virtual void OnScanStopped() 
-    { 
+    virtual void OnScanStopped()
+    {
         INFO("~BLEManagerBase::OnScanStopped()\r\n");
     }
 
-    virtual void OnInitDone() 
-    { 
+    virtual void OnInitDone()
+    {
         INFO("~BLEManagerBase::OnInitDone()\r\n");
         StartScan();
     }
@@ -156,6 +176,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     void OnInitialized(BLE::InitializationCompleteCallbackContext *event)
     {
         INFO("~BLEManagerBase::OnInitialized() err=0x%x\r\n", event->error);
+        OnInitDone();
     }
 
     void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event)
@@ -180,6 +201,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     }
 
     BLEManagerBase(BLE &ble_interface, BikeGUI *gui) : ble_(ble_interface), gui_(gui)
+        , scanning_active_(false)
     {
     }
 
@@ -187,7 +209,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     {
     }
 
-    bool IsSameId128(uint8_t* a, uint8_t* b)
+    bool IsSameId128(const uint8_t *a, const uint8_t *b)
     {
         for (uint8_t i = 0; i < 16; i++)
         {

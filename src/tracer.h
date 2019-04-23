@@ -2,7 +2,7 @@
 #define TRAVER_H
 
 //#define ENABLE_DEBUG_PRINT
-#define ENABLE_FLOW_PRINT
+//#define ENABLE_FLOW_PRINT
 #define ENABLE_INFO_PRINT
 
 #ifdef ENABLE_DEBUG_PRINT
