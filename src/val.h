@@ -3,28 +3,35 @@
 
 #include "mbed.h"
 
-typedef struct val_uint8 {
-    uint8_t current;
-    uint8_t shown;
-} val_uint8_t;
 
-typedef struct val_uint32 {
-    uint32_t current;
-    uint32_t shown;
-} val_uint32_t;
-
-
-static bool new_val(val_uint8_t & v) {
-    if(v.current != v.shown) {
-        v.shown = v.current;
+static bool IsUint8Updated(uint8_t & oldVal, uint8_t newVal) {
+    if(oldVal != newVal) {
+        oldVal = newVal;
         return true;
     }
     return false;
 }
 
-static bool new_val32(val_uint32_t & v) {
-    if(v.current != v.shown) {
-        v.shown = v.current;
+static bool IsUint16Updated(uint16_t & oldVal, uint16_t newVal) {
+    if(oldVal != newVal) {
+        oldVal = newVal;
+        return true;
+    }
+    return false;
+}
+
+static bool IsUint32Updated(uint32_t & oldVal, uint32_t newVal) {
+    if(oldVal != newVal) {
+        oldVal = newVal;
+        return true;
+    }
+    return false;
+}
+
+static bool IsStringUpdated(uint8_t* oldVal, uint8_t* newVal, uint8_t len)
+{
+    if(memcmp(oldVal, newVal, len)) {
+        memcpy(oldVal, newVal, len);
         return true;
     }
     return false;

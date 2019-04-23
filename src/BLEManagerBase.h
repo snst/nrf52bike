@@ -17,12 +17,13 @@
 #include "ble/DiscoveredCharacteristic.h"
 #include "ble/DiscoveredService.h"
 #include "gap/AdvertisingDataParser.h"
+#include "IAppCallback.h"
 
 #include "tracer.h"
 
 class BikeGUI;
 
-class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
+class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCallback
 {
 
     typedef BLEManagerBase Self;
@@ -41,15 +42,20 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
         return makeFunctionPointer(this, member);
     }
 
+    virtual void OnAppReady(BLEAppBase* app)
+    {
+        INFO("~BLEManagerBase::OnAppReady() app=%p\r\n", app);
+    }
+/*
     void Connect(BLEProtocol::AddressBytes_t &device_addr, BLEProtocol::AddressType_t &device_addr_type)
     {
-        INFO("~Connect()\r\n");
+        INFO("~BLEManagerBase::Connect()\r\n");
         ble_.gap().connect(device_addr, device_addr_type, NULL, NULL);
     }
-
+*/
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params)
     {
-        FLOW("~OnConnected() handle=0x%x\r\n", params->handle);
+        FLOW("~BLEManagerBase::OnConnected() handle=0x%x\r\n", params->handle);
         if (params->role == Gap::CENTRAL)
         {
         }
@@ -57,12 +63,12 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
 
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
     {
-        INFO("~OnDisconnected() reason=0x%x\r\n", param->reason);
+        INFO("~BLEManagerBase::OnDisconnected() reason=0x%x\r\n", param->reason);
     }
 
     virtual void OnDataRead(const GattReadCallbackParams *params)
     {
-        FLOW("~OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
+        FLOW("~BLEManagerBase::OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
         for (unsigned index = 0; index < params->len; index++)
         {
             FLOW(" %02x", params->data[index]);
@@ -72,7 +78,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
 
     virtual void OnHVX(const GattHVXCallbackParams *params)
     {
-        FLOW("~OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
+        FLOW("~BLEManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
         for (unsigned index = 0; index < params->len; index++)
         {
             FLOW(" %02x", params->data[index]);
@@ -85,7 +91,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
 
     void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params)
     {
-        INFO("~OnAdvertisement addr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, advType %u, addrType %u, len=%u.\r\n",
+        INFO("~BLEManagerBase::OnAdvertisement addr[%02x %02x %02x %02x %02x %02x] rssi %d, isScanResponse %u, advType %u, addrType %u, len=%u.\r\n",
              params->peerAddr[5], params->peerAddr[4], params->peerAddr[3], params->peerAddr[2], params->peerAddr[1], params->peerAddr[0],
              params->rssi, params->isScanResponse, params->type, params->peerAddrType, params->advertisingDataLen);
 
@@ -118,22 +124,38 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
         }
     }
 
-    void StartScan()
+    void StartScan(uint32_t timeout = 0)
     {
-        INFO("~StatScan()\r\n");
+        INFO("~BLEManagerBase::StartScan(), timeout=%u\r\n", timeout);
         ble_.gap().setScanParams(400, 400, 0, true);
         ble_.gap().startScan(this, &BLEManagerBase::OnAdvertisement);
+        if (timeout > 0) {
+            event_queue_.call_in(timeout, mbed::callback(this, &BLEManagerBase::StopScan))
+        }
     }
 
     void StopScan()
     {
+        INFO("~BLEManagerBase::StopScan()\r\n");
         ble_.stopScan();
+//        event_queue_.call(mbed::callback(this, &BLEManagerBase::OnScanStopped))
+        OnScanStopped();
+    }
+
+    virtual void OnScanStopped() 
+    { 
+        INFO("~BLEManagerBase::OnScanStopped()\r\n");
+    }
+
+    virtual void OnInitDone() 
+    { 
+        INFO("~BLEManagerBase::OnInitDone()\r\n");
+        StartScan();
     }
 
     void OnInitialized(BLE::InitializationCompleteCallbackContext *event)
     {
-        INFO("~OnInitialized() err=0x%x\r\n", event->error);
-        StartScan();
+        INFO("~BLEManagerBase::OnInitialized() err=0x%x\r\n", event->error);
     }
 
     void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event)
@@ -143,6 +165,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
 
     void Start()
     {
+        INFO("~BLEManagerBase::Start()\r\n");
         ble_.onEventsToProcess(makeFunctionPointer(this, &Self::ScheduleBleEvents));
         timer_.start();
 
@@ -162,6 +185,18 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>
 
     virtual ~BLEManagerBase()
     {
+    }
+
+    bool IsSameId128(uint8_t* a, uint8_t* b)
+    {
+        for (uint8_t i = 0; i < 16; i++)
+        {
+            if (a[i] != b[15 - i])
+            {
+                return false;
+            }
+        }
+        return true;
     }
 };
 

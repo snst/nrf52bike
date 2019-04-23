@@ -592,7 +592,7 @@ int main(void)
                 tft.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
             }
         }
-        if (new_val32(komoot_dist))
+        if (IsUint32Updated(komoot_dist))
         {
             tft.fillRect(0, 80, 80, 50, ST77XX_BLACK);
             tft.setCursor(10, 120);

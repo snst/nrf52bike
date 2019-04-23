@@ -3,11 +3,13 @@
 
 #include "BLEManagerBase.h"
 #include "BLEAppCSC.h"
+#include "BLEAppKomoot.h"
 
 class BLEManager : public BLEManagerBase
 {
 public:
   BLEAppCSC csc_app;
+  BLEAppKomoot komoot_app;
 
   BLEManager(BLE &ble_interface, BikeGUI* gui);
   virtual ~BLEManager();
@@ -18,6 +20,9 @@ public:
   //virtual void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params);
   virtual void OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params);
   virtual void OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params);
+  virtual void OnInitDone();
+  virtual void OnScanStopped();
+  virtual void OnAppReady(BLEAppBase* app);
 };
 
 #endif

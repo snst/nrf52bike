@@ -39,8 +39,10 @@ protected:
   uint16_t characteristic_id;
   bool found_characteristic;
   bool found_desc2902_;
+  bool found_device;
   Timer &timer_;
   BikeGUI *gui_;
+  IAppCallback* app_callback_;
 
 public:
   BLEAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) : event_queue_(event_queue),
@@ -49,7 +51,9 @@ public:
                                                                                   _post_init_cb(),
                                                                                   desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
                                                                                   found_characteristic(false),
-                                                                                  found_desc2902_(false)
+                                                                                  found_desc2902_(false),
+                                                                                  found_device(false), 
+                                                                                  app_callback_(NULL)
   {
   }
 
@@ -74,10 +78,14 @@ public:
     return connection_handle_;
   }
 
-  void Connect()
+  bool Connect()
   {
-    INFO("~BLEAppBase::Connect()\r\n");
-    ble_.gap().connect(device_addr_, device_addr_type_, NULL, NULL);
+    INFO("~BLEAppBase::Connect() found_device=%d\r\n", found_device);
+    if(found_device) {
+      ble_.gap().connect(device_addr_, device_addr_type_, NULL, NULL);
+      return true;
+    }
+    return false;
   }
 
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params)
@@ -158,9 +166,19 @@ public:
     }
   }
 
+  virtual void OnAppReady() 
+  {
+    DBG("~BLEAppBase::OnAppReady()\r\n");
+    if (NULL != app_callback_)
+    {
+      app_callback_->OnAppReady(this);
+    }
+  }
+
   virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
   {
     DBG("~BLEAppBase::OnCharacteristicDescriptorsFinished()\r\n");
+    OnAppReady();
   }
 
   virtual void StartCharacteristicDescriptorsDiscovery(DiscoveredCharacteristic &characteristic)
@@ -198,6 +216,7 @@ public:
   {
     memcpy(&device_addr_, &params->peerAddr, sizeof(device_addr_));
     device_addr_type_ = params->addressType;
+    found_device = true;
   }
 
   bool HasAddress(const BLEProtocol::AddressBytes_t &peerAddr)
@@ -223,6 +242,11 @@ public:
   DiscoveredCharacteristic &GetCharacteristic()
   {
     return characteristic_;
+  }
+
+  void SetAppCallback(IAppCallback* cb)
+  {
+    app_callback_ = cb;
   }
 };
 
