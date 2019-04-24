@@ -66,7 +66,7 @@ void BLEManager::OnHVX(const GattHVXCallbackParams *params)
 {
     BLEManagerBase::OnHVX(params);
     BLEAppBase *app = GetAppWithConnectionHandle(params->connHandle);
-    INFO("~BLEManager::OnHVX app=%p\r\n", app);
+    FLOW("~BLEManager::OnHVX app=%p\r\n", app);
     if (app)
     {
         app->OnHVX(params);

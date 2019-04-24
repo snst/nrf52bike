@@ -17,7 +17,7 @@ BikeGUI::BikeGUI()
 
 void BikeGUI::ShowValue(uint8_t x, uint8_t y, uint32_t value)
 {
-    tft.fillRect(x, y, 80, 35, Adafruit_ST7735::Color565(0, 0, 0));
+    //tft.fillRect(x, y, 80, 35, Adafruit_ST7735::Color565(0, 0, 0));
     tft.setCursor(x, y+33);
     tft.printf("%.3d", value);
 }
