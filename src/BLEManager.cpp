@@ -13,7 +13,9 @@ BLEManager::BLEManager(BLE &ble_interface, BikeGUI *gui)
     komoot_app.SetAppCallback(this);
 }
 
+
 BLEManager::~BLEManager() {}
+
 
 void BLEManager::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
@@ -28,6 +30,8 @@ void BLEManager::OnConnected(const Gap::ConnectionCallbackParams_t *params)
         komoot_app.OnConnected(params);
     }
 }
+
+
 void BLEManager::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params)
 {
     BLEManagerBase::OnDisconnected(params);
@@ -41,10 +45,14 @@ void BLEManager::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params
         komoot_app.OnDisconnected(params);
     }
 }
+
+
 void BLEManager::OnDataRead(const GattReadCallbackParams *params)
 {
     BLEManagerBase::OnDataRead(params);
 }
+
+
 void BLEManager::OnHVX(const GattHVXCallbackParams *params)
 {
     BLEManagerBase::OnHVX(params);
@@ -61,6 +69,7 @@ void BLEManager::OnHVX(const GattHVXCallbackParams *params)
 //    ::OnAdvertisement(params);
 //}
 
+
 void BLEManager::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)
 {
     INFO("~BLEManager::OnFoundService16(0x%x)\r\n", id);
@@ -72,6 +81,7 @@ void BLEManager::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackP
     }
 }
 
+
 void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params)
 {
     INFO("~BLEManager::OnFoundService128(0x%x%x%x%x)\r\n", id[0], id[1], id[2], id[3]);
@@ -82,6 +92,7 @@ void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCa
         CheckScanStop();
     }
 }
+
 
 void BLEManager::CheckScanStop()
 {
@@ -101,11 +112,13 @@ void BLEManager::CheckScanStop()
     }
 }
 
+
 void BLEManager::OnInitDone()
 {
     INFO("~BLEManager::OnInitDone()\r\n");
     StartScan(10000);
 }
+
 
 void BLEManager::OnScanStopped()
 {
@@ -114,6 +127,7 @@ void BLEManager::OnScanStopped()
     komoot_app.Connect();
     event_queue_.call_in(5000, mbed::callback(&csc_app, &BLEAppCSC::Connect));
 }
+
 
 void BLEManager::OnAppReady(BLEAppBase *app)
 {

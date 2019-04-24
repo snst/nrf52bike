@@ -7,7 +7,7 @@
 #include "BLEManager.h"
 #include "BikeGUI.h"
 
-Serial pc(USBTX, USBRX); // tx, rx
+Serial pc(USBTX, USBRX);
 
 int main(void)
 {
