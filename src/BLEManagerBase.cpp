@@ -1,16 +1,12 @@
 #include "BLEManagerBase.h"
 
-
-BLEManagerBase::BLEManagerBase(BLE &ble_interface, BikeGUI *gui) : ble_(ble_interface), gui_(gui)
-    , scanning_active_(false)
+BLEManagerBase::BLEManagerBase(BLE &ble_interface, BikeGUI *gui) : ble_(ble_interface), gui_(gui), scanning_active_(false)
 {
 }
-
 
 BLEManagerBase::~BLEManagerBase()
 {
 }
-
 
 void BLEManagerBase::OnAppReady(BLEAppBase *app)
 {
@@ -28,12 +24,10 @@ void BLEManagerBase::OnConnected(const Gap::ConnectionCallbackParams_t *params)
     FLOW("~BLEManagerBase::OnConnected() handle=0x%x\r\n", params->handle);
 }
 
-
 void BLEManagerBase::OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
 {
     INFO("~BLEManagerBase::OnDisconnected() reason=0x%x\r\n", param->reason);
 }
-
 
 void BLEManagerBase::OnDataRead(const GattReadCallbackParams *params)
 {
@@ -45,7 +39,6 @@ void BLEManagerBase::OnDataRead(const GattReadCallbackParams *params)
     FLOW("\r\n");
 }
 
-
 void BLEManagerBase::OnHVX(const GattHVXCallbackParams *params)
 {
     FLOW("~BLEManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
@@ -56,14 +49,13 @@ void BLEManagerBase::OnHVX(const GattHVXCallbackParams *params)
     FLOW("\r\n");
 }
 
+void BLEManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)
+{
+}
 
-void BLEManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params) 
-{}
-
-
-void BLEManagerBase::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params) 
-{}
-
+void BLEManagerBase::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params)
+{
+}
 
 void BLEManagerBase::OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params)
 {
@@ -100,14 +92,12 @@ void BLEManagerBase::OnAdvertisement(const Gap::AdvertisementCallbackParams_t *p
     }
 }
 
-
 bool BLEManagerBase::IsScanActive()
 {
     return scanning_active_;
 }
 
-
-void BLEManagerBase::StartScan(uint32_t timeout = 0)
+void BLEManagerBase::StartScan(uint32_t timeout)
 {
     INFO("~BLEManagerBase::StartScan(), timeout=%u, active=%d\r\n", timeout, scanning_active_);
     if (!scanning_active_)
@@ -116,19 +106,17 @@ void BLEManagerBase::StartScan(uint32_t timeout = 0)
         scanning_active_ = true;
         ble_.gap().setScanParams(400, 400, 0, true);
         ble_.gap().startScan(this, &BLEManagerBase::OnAdvertisement);
-    /*    if (timeout > 0)
+        /*    if (timeout > 0)
         {
             event_queue_.call_in(timeout, mbed::callback(this, &BLEManagerBase::OnScanTimeout));
         }*/
     }
 }
 
-
 uint32_t BLEManagerBase::GetScanTimeMs()
 {
     return timer_.read_ms() - start_scan_ms_;
 }
-
 
 void BLEManagerBase::StopScan()
 {
@@ -141,12 +129,10 @@ void BLEManagerBase::StopScan()
     }
 }
 
-
 void BLEManagerBase::OnScanStopped()
 {
     INFO("~BLEManagerBase::OnScanStopped()\r\n");
 }
-
 
 void BLEManagerBase::OnInitDone()
 {
@@ -154,19 +140,21 @@ void BLEManagerBase::OnInitDone()
     StartScan();
 }
 
-
 void BLEManagerBase::OnInitialized(BLE::InitializationCompleteCallbackContext *event)
 {
     INFO("~BLEManagerBase::OnInitialized() err=0x%x\r\n", event->error);
     OnInitDone();
 }
 
-
 void BLEManagerBase::ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event)
 {
     event_queue_.call(mbed::callback(&event->ble, &BLE::processEvents));
 }
 
+void BLEManagerBase::OnServiceDiscoveryFinished(Gap::Handle_t handle)
+{
+  INFO("~BLEManagerBase::OnServiceDiscoveryFinished() handle=0x%x\r\n", handle);
+}
 
 void BLEManagerBase::Start()
 {
@@ -180,10 +168,10 @@ void BLEManagerBase::Start()
     ble_.gap().onDisconnection(as_cb(&Self::OnDisconnected));
     ble_.gattClient().onHVX(as_cb(&Self::OnHVX));
     ble_.gattClient().onDataRead(as_cb(&Self::OnDataRead));
+    ble_.gattClient().onServiceDiscoveryTermination(as_cb(&Self::OnServiceDiscoveryFinished));
 
     event_queue_.dispatch_forever();
 }
-
 
 bool BLEManagerBase::IsSameId128(const uint8_t *a, const uint8_t *b)
 {

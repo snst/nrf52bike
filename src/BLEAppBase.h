@@ -36,6 +36,7 @@ public:
   const Gap::Handle_t &GetConnectionHandle();
   bool Connect();
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
+  bool IsConnected();
   void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
   virtual void OnServiceFound(const DiscoveredService *service);
   virtual void OnServiceCharacteristicFound(const DiscoveredCharacteristic *param);
@@ -48,7 +49,7 @@ public:
   virtual void RequestNotify(bool enable);
   void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc);
   virtual void OnDataRead(const GattReadCallbackParams *params);
-  void OnHVX(const GattHVXCallbackParams *params);
+  virtual void OnHVX(const GattHVXCallbackParams *params);
   void on_init(mbed::Callback<void(BLE &, events::EventQueue &)> cb);
   void SetDeviceAddress(const Gap::AdvertisementCallbackParams_t *params);
   bool HasAddress(const BLEProtocol::AddressBytes_t &peerAddr);

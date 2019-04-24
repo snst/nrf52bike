@@ -1,0 +1,27 @@
+sequenceDiagram
+    BLE->>+BLEManagerBase: OnInitDone()
+    BLEManagerBase->>BLEManagerBase: StartScan()
+    BLEManagerBase->>-BLE: StartScan()
+    activate BLEManagerBase
+    BLE->>BLEManagerBase: OnAdvertisement()
+    BLEManagerBase->>+BLEManager: OnFoundService16()
+    BLEManager->>CSC: SetDeviceAddress()
+    BLEManager->>-BLEManager: CheckScanStop()
+    BLEManagerBase->>+BLEManager: OnFoundService128()
+    BLEManager->>Komoot: SetDeviceAddress()
+    BLEManager->>BLEManager: CheckScanStop()
+    opt CSC.HaveFoundDevice() && Komoot.HaveFoundDevice()
+    BLEManager->>-BLEManagerBase: StopScan()
+    BLEManagerBase->>EQ: call_in(100, BLEManagerBase::OnScanStopped)
+    end
+    deactivate BLEManagerBase
+    EQ->>+BLEManager: OnScanStopped()
+    BLEManager->>Komoot: Connect()
+    BLEManager->>-EQ: call_in(5000, BLEAppCSC::Connect)
+    BLE->>+BLEManager: OnConnected()
+    alt Komoot.HasAddress()
+    BLEManager->>Komoot: OnConnected()
+    else CSC.HasAddress()
+    BLEManager->>-CSC: OnConnected()
+    end
+

@@ -29,7 +29,6 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     typedef BLEManagerBase Self;
 
   public:
-
     template <typename ContextType>
     FunctionPointerWithContext<ContextType> as_cb(
         void (Self::*member)(ContextType context))
@@ -44,6 +43,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
     virtual void OnDataRead(const GattReadCallbackParams *params);
     virtual void OnHVX(const GattHVXCallbackParams *params);
+    virtual void OnServiceDiscoveryFinished(Gap::Handle_t handle);
     virtual void OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params);
     virtual void OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params);
     void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params);
@@ -58,7 +58,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     void Start();
     bool IsSameId128(const uint8_t *a, const uint8_t *b);
 
-protected:
+  protected:
     events::EventQueue event_queue_;
     BLE &ble_;
     Timer timer_;

@@ -13,9 +13,7 @@ BLEManager::BLEManager(BLE &ble_interface, BikeGUI *gui)
     komoot_app.SetAppCallback(this);
 }
 
-
 BLEManager::~BLEManager() {}
-
 
 void BLEManager::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
@@ -31,7 +29,6 @@ void BLEManager::OnConnected(const Gap::ConnectionCallbackParams_t *params)
     }
 }
 
-
 void BLEManager::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params)
 {
     BLEManagerBase::OnDisconnected(params);
@@ -46,33 +43,53 @@ void BLEManager::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params
     }
 }
 
-
 void BLEManager::OnDataRead(const GattReadCallbackParams *params)
 {
     BLEManagerBase::OnDataRead(params);
 }
 
+BLEAppBase *BLEManager::GetAppWithConnectionHandle(Gap::Handle_t handle)
+{
+    BLEAppBase *ret = NULL;
+    if (handle == csc_app.GetConnectionHandle())
+    {
+        ret = &csc_app;
+    }
+    else if (handle == komoot_app.GetConnectionHandle())
+    {
+        ret = &komoot_app;
+    }
+    return ret;
+}
 
 void BLEManager::OnHVX(const GattHVXCallbackParams *params)
 {
     BLEManagerBase::OnHVX(params);
-    if (params->connHandle == csc_app.GetConnectionHandle())
+    BLEAppBase *app = GetAppWithConnectionHandle(params->connHandle);
+    INFO("~BLEManager::OnHVX app=%p\r\n", app);
+    if (app)
     {
-        csc_app.OnHVX(params);
-    }
-    else if (params->connHandle == komoot_app.GetConnectionHandle())
-    {
-        komoot_app.OnHVX(params);
-    }
+        app->OnHVX(params);
+    } 
+    //event_queue_.call_in(100, mbed::callback(this, &BLEManager::ConnectDevices));
 }
 //void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params) {
 //    ::OnAdvertisement(params);
 //}
 
+void BLEManager::OnServiceDiscoveryFinished(Gap::Handle_t handle)
+{
+    INFO("~BLEManager::OnServiceDiscoveryFinished() handle=0x%x\r\n", handle);
+    BLEAppBase *app = GetAppWithConnectionHandle(handle);
+    if (app)
+    {
+        app->OnServiceDiscoveryFinished(handle);
+    }
+}
 
 void BLEManager::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)
 {
-    INFO("~BLEManager::OnFoundService16(0x%x)\r\n", id);
+    FLOW("~BLEManager::OnFoundService16(0x%x)\r\n", id);
     if (id == GAT_SERVICE_CSCS)
     {
         INFO("FOUND CSC\r\n");
@@ -81,10 +98,9 @@ void BLEManager::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackP
     }
 }
 
-
 void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params)
 {
-    INFO("~BLEManager::OnFoundService128(0x%x%x%x%x)\r\n", id[0], id[1], id[2], id[3]);
+    FLOW("~BLEManager::OnFoundService128(0x%x%x%x%x)\r\n", id[0], id[1], id[2], id[3]);
     if (IsSameId128(id, GAT_SERVICE_KOMOOT))
     {
         INFO("FOUND Komoot\r\n");
@@ -92,7 +108,6 @@ void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCa
         CheckScanStop();
     }
 }
-
 
 void BLEManager::CheckScanStop()
 {
@@ -112,25 +127,30 @@ void BLEManager::CheckScanStop()
     }
 }
 
-
-void BLEManager::OnInitDone()
+void BLEManager::ConnectDevices()
 {
-    INFO("~BLEManager::OnInitDone()\r\n");
-    StartScan(10000);
+    if (csc_app.HaveFoundDevice() && !csc_app.IsConnected())
+    {
+        csc_app.Connect();
+    }
+    else if (komoot_app.HaveFoundDevice() && !komoot_app.IsConnected())
+    {
+        komoot_app.Connect();
+    }
 }
-
 
 void BLEManager::OnScanStopped()
 {
     INFO("~BLEManager::OnScanStopped()\r\n");
+    event_queue_.call_every(1000, mbed::callback(this, &BLEManager::ConnectDevices));
     //csc_app.Connect();
-    komoot_app.Connect();
-    event_queue_.call_in(5000, mbed::callback(&csc_app, &BLEAppCSC::Connect));
+    //komoot_app.Connect();
+    //event_queue_.call_in(5000, mbed::callback(&csc_app, &BLEAppCSC::Connect));
 }
-
 
 void BLEManager::OnAppReady(BLEAppBase *app)
 {
+    INFO("~BLEManager::OnAppReady() app=%p\r\n", app);
     /*
     INFO("~BLEManager::OnAppReady() app=%p\r\n", app);
     if (app == &csc_app)

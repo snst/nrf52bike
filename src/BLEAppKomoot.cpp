@@ -4,7 +4,7 @@
 BLEAppKomoot::BLEAppKomoot(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface) 
 : BLEAppBase(event_queue, timer, ble_interface, "Komoot")
 {
-    FindCharacteristic(0x2A5B);
+    FindCharacteristic(0xd605);
 }
 
 BLEAppKomoot::~BLEAppKomoot()
