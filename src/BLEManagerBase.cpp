@@ -1,4 +1,5 @@
 #include "BLEManagerBase.h"
+#include "BikeGUI.h"
 
 BLEManagerBase::BLEManagerBase(BLE &ble_interface, BikeGUI *gui) : ble_(ble_interface), gui_(gui), scanning_active_(false)
 {
@@ -137,6 +138,7 @@ void BLEManagerBase::OnScanStopped()
 void BLEManagerBase::OnInitDone()
 {
     INFO("~BLEManagerBase::OnInitDone()\r\n");
+    Gui()->Log("Scanning\n");
     StartScan();
 }
 
@@ -153,12 +155,13 @@ void BLEManagerBase::ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *ev
 
 void BLEManagerBase::OnServiceDiscoveryFinished(Gap::Handle_t handle)
 {
-  INFO("~BLEManagerBase::OnServiceDiscoveryFinished() handle=0x%x\r\n", handle);
+    INFO("~BLEManagerBase::OnServiceDiscoveryFinished() handle=0x%x\r\n", handle);
 }
 
 void BLEManagerBase::Start()
 {
     INFO("~BLEManagerBase::Start()\r\n");
+    Gui()->Log("Startup\n");
     ble_.onEventsToProcess(makeFunctionPointer(this, &Self::ScheduleBleEvents));
     timer_.start();
 
@@ -183,4 +186,9 @@ bool BLEManagerBase::IsSameId128(const uint8_t *a, const uint8_t *b)
         }
     }
     return true;
+}
+
+BikeGUI *BLEManagerBase::Gui()
+{
+    return gui_;
 }

@@ -7,8 +7,8 @@ class BLEAppBase;
 
 class IAppCallback
 {
-  public:
-    virtual void OnAppReady(BLEAppBase* app) = 0;
+public:
+  virtual void OnAppReady(BLEAppBase *app) = 0;
 };
 
 #endif

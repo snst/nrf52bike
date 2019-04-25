@@ -16,6 +16,5 @@ int main(void)
     BikeGUI gui;
     BLEManager mgr(ble, &gui);
     mgr.Start();
-
     return 0;
 }

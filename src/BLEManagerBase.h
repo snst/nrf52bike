@@ -57,6 +57,7 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event);
     void Start();
     bool IsSameId128(const uint8_t *a, const uint8_t *b);
+    BikeGUI *Gui();
 
   protected:
     events::EventQueue event_queue_;

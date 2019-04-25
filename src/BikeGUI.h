@@ -11,27 +11,35 @@
 
 class BikeGUI : public ICscGUI, public IKomootGUI
 {
-  public:
-    BikeGUI();
-    virtual void UpdateSpeed(uint16_t speed);
-    virtual void UpdateCadence(uint16_t cadence);
-    virtual void UpdateDirection(uint8_t dir);
-    virtual void UpdateDistance(uint32_t distance);
-    virtual void UpdateStreet(uint8_t* street);
+public:
+  BikeGUI();
+  virtual void UpdateSpeed(uint16_t val);
+  virtual void UpdateCadence(uint16_t val);
+  virtual void UpdateTravelDistance(uint16_t val);
+  virtual void UpdateTravelTime(uint16_t val);
+  virtual void UpdateAverageSpeed(uint16_t val);
+  virtual void UpdateDirection(uint8_t dir);
+  virtual void UpdateDistance(uint32_t distance);
+  virtual void UpdateStreet(uint8_t *street);
+  virtual void Log(const char *str);
+  void Operational();
 
-  protected:
-    Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
-    //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
+protected:
+  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
+  //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
 
-    uint8_t csc_bat_;
-    uint16_t csc_speed_;
-    uint16_t csc_cadence_;
-    uint8_t komoot_direction_;
-    uint32_t komoot_distance_;
-    uint8_t komoot_street_[MAX_KOMOOT_STREET_LEN];
+  uint8_t csc_bat_;
+  uint16_t csc_speed_;
+  uint16_t csc_cadence_;
+  uint16_t csc_average_speed_;
+  uint16_t csc_distance_;
+  uint16_t csc_travel_time_;
+  
+  uint8_t komoot_direction_;
+  uint32_t komoot_distance_;
+  uint8_t komoot_street_[MAX_KOMOOT_STREET_LEN];
 
-    void ShowValue(uint8_t x, uint8_t y, uint32_t value);
-
+  void ShowValue(uint8_t x, uint8_t y, uint32_t value);
 };
 
 #endif

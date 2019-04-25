@@ -1,4 +1,5 @@
 #include "BLEManager.h"
+#include "BikeGUI.h"
 
 #define GAT_SERVICE_CSCS (0x1816u)
 #define GAT_SERVICE_BAT (0x180Fu)
@@ -93,6 +94,10 @@ void BLEManager::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackP
     if (id == GAT_SERVICE_CSCS)
     {
         INFO("FOUND CSC\r\n");
+        if(!csc_app.HaveFoundDevice())
+        {
+            Gui()->Log("CSC\n");
+        }
         csc_app.SetDeviceAddress(params);
         CheckScanStop();
     }
@@ -104,6 +109,10 @@ void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCa
     if (IsSameId128(id, GAT_SERVICE_KOMOOT))
     {
         INFO("FOUND Komoot\r\n");
+        if(!komoot_app.HaveFoundDevice())
+        {
+            Gui()->Log("Komoot\n");
+        }
         komoot_app.SetDeviceAddress(params);
         CheckScanStop();
     }
@@ -111,7 +120,7 @@ void BLEManager::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCa
 
 void BLEManager::CheckScanStop()
 {
-    bool isTimeout = GetScanTimeMs() > 10000;
+    bool isTimeout = GetScanTimeMs() > 5000;
     INFO("~BLEManager::CheckScanStop() CSC=%d, Komoot=%d, timeout=%d\r\n",
          csc_app.HaveFoundDevice(),
          komoot_app.HaveFoundDevice(),
@@ -120,9 +129,11 @@ void BLEManager::CheckScanStop()
     if (csc_app.HaveFoundDevice() && komoot_app.HaveFoundDevice())
     {
         StopScan();
+        Gui()->Log("Stop scanning\n");
     }
     else if (isTimeout && (csc_app.HaveFoundDevice() || komoot_app.HaveFoundDevice()))
     {
+        Gui()->Log("Scan timeout\n");
         StopScan();
     }
 }
@@ -142,6 +153,7 @@ void BLEManager::ConnectDevices()
 void BLEManager::OnScanStopped()
 {
     INFO("~BLEManager::OnScanStopped()\r\n");
+    Gui()->Operational();
     event_queue_.call_every(1000, mbed::callback(this, &BLEManager::ConnectDevices));
     //csc_app.Connect();
     //komoot_app.Connect();
