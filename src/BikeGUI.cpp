@@ -1,6 +1,7 @@
 #include "BikeGUI.h"
 //#include "FreeSansBold24pt7b.h"
-#include "Open_Sans_Condensed_Bold.h"
+//#include "Open_Sans_Condensed_Bold.h"
+#include "digital7.h"
 #include "gfxfont.h"
 #include "icons.h"
 #include "val.h"
@@ -16,16 +17,22 @@ BikeGUI::BikeGUI()
     tft.setFont(NULL);
 }
 
-void BikeGUI::ShowValue(uint8_t x, uint8_t y, uint32_t value)
+void BikeGUI::SetCursor(uint8_t x, uint8_t y, uint8_t size)
 {
-    y = y * 32;
-    tft.fillRect(x, y, 80, 32, Adafruit_ST7735::Color565(0, 255, 0));
+    tft.setTextSize(size);
+    y = y * 40;
+    tft.fillRect(x, y, 80, 40, Adafruit_ST7735::Color565(0, 0, 0));
     tft.setTextWrap(false);
     //tft.setFont(&FreeSansBold24pt7b);
-    tft.setFont(&Open_Sans_Condensed_Bold_50);
+    tft.setFont(&digital_732pt7b);
 
     tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 0));
-    tft.setCursor(x, y + 36);
+    tft.setCursor(x, y + 40);
+}
+
+void BikeGUI::ShowValue(uint8_t x, uint8_t y, uint32_t value)
+{
+    SetCursor(x,y,1);
     tft.printf("%.2d", value);
 }
 
@@ -34,7 +41,8 @@ void BikeGUI::UpdateSpeed(uint16_t val)
     if (IsUint16Updated(csc_speed_, val))
     {
         INFO("~BikeGUI::UpdateSpeed() => %u\r\n", val);
-        ShowValue(0, 0, val);
+        SetCursor(0, 0, 1);
+        tft.printf("%d", val);
     }
 }
 
@@ -43,7 +51,7 @@ void BikeGUI::UpdateAverageSpeed(uint16_t val)
     if (IsUint16Updated(csc_average_speed_, val))
     {
         INFO("~BikeGUI::UpdateAverageSpeed() => %u\r\n", val);
-        ShowValue(0, 1, val);
+        //ShowValue(0, 1, val);
     }
 }
 
@@ -61,7 +69,7 @@ void BikeGUI::UpdateTravelTime(uint16_t val)
     if (IsUint16Updated(csc_travel_time_, val))
     {
         INFO("~BikeGUI::UpdateTravelTime() => %u\r\n", val);
-        ShowValue(0, 3, val);
+        //ShowValue(0, 3, val);
     }
 }
 
@@ -70,7 +78,7 @@ void BikeGUI::UpdateCadence(uint16_t val)
     if (IsUint16Updated(csc_cadence_, val))
     {
         INFO("~BikeGUI::UpdateCadence() => %u\r\n", val);
-        ShowValue(0, 4, val);
+        //ShowValue(0, 4, val);
     }
 }
 

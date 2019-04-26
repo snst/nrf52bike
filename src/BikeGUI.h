@@ -40,6 +40,7 @@ protected:
   uint8_t komoot_street_[MAX_KOMOOT_STREET_LEN];
 
   void ShowValue(uint8_t x, uint8_t y, uint32_t value);
+  void SetCursor(uint8_t x, uint8_t y, uint8_t size);
 };
 
 #endif

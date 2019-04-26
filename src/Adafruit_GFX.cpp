@@ -1131,30 +1131,25 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         // displays supporting setAddrWindow() and pushColors()), but haven't
         // implemented this yet.
 
-        //startWrite();
-        uint16_t* buf = (uint16_t*) malloc(w*2);
+        uint16_t* buf = (uint16_t*) malloc(w*size*2);
+        uint8_t yyy=0;
         for(yy=0; yy<h; yy++) {
+            uint16_t* p = &buf[0];
             for(xx=0; xx<w; xx++) {
                 if(!(bit++ & 7)) {
                     bits = pgm_read_byte(&bitmap[bo++]);
                 }
-                //color = 0xFF00;
+                
                 uint16_t col = (bits & 0x80) ? ((color>>8) | (color << 8)) : 0;
-                buf[xx] = col;
-                /*
-                if(bits & 0x80) {
-                    if(size == 1) {
-                        writePixel(x+xo+xx, y+yo+yy, color);
-                    } 
-                    else {
-                        writeFillRect(x+(xo16+xx)*size, y+(yo16+yy)*size,
-                          size, size, color);
-                    }
+                for(uint8_t k=0; k<size; k++) {
+                    *p++ = col;
                 }
-                */
                 bits <<= 1;
             }
-            drawBuffer(x+xo,y+yo+yy,(uint8_t*) buf, w);
+            for(uint8_t l=0;l<size;l++) {
+                drawBuffer(x+xo,y+yo+yyy,(uint8_t*) buf, w*size);
+                yyy++;
+            }
         }
         free(buf);
         //endWrite();
