@@ -1,0 +1,4 @@
+#define dot_width 5
+#define dot_height 5
+static unsigned char dot_bits[] = {
+   0x0e, 0x1f, 0x1f, 0x1f, 0x0e };
