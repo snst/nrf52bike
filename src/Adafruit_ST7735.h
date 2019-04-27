@@ -2,7 +2,7 @@
 #define _ADAFRUIT_ST7735H_
 
 #include "mbed.h"
-#include "Adafruit_GFX.h"
+#include "GFX.h"
 
 #define boolean bool
 
@@ -91,7 +91,7 @@
 #define ST77XX_YELLOW     0xFFE0
 #define	ST77XX_ORANGE     0xFC00
 
-class Adafruit_ST7735 : public Adafruit_GFX
+class Adafruit_ST7735 : public GFX
 {
 
 public:

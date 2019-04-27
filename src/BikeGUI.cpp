@@ -6,9 +6,8 @@
 #include "icons.h"
 #include "val.h"
 #include "tracer.h"
-#include "../font/f36.xbm"
-#include "../font/f22.xbm"
-#include "../font/dot.xbm"
+#include "../font/Open_Sans_Condensed_Bold_31.h"
+#include "../font/Open_Sans_Condensed_Bold_49.h"
 
 BikeGUI::BikeGUI()
 {
@@ -42,11 +41,10 @@ void BikeGUI::ShowValue(uint8_t x, uint8_t y, uint32_t value)
 void BikeGUI::ShowSpeed(uint8_t x, uint8_t y, uint16_t value)
 {
     uint8_t w = 25;
-    tft.fillRect(0, y, 80, f36_height/10, Adafruit_ST7735::Color565(0, 0, 0));
-    ShowDigit('b', x, y, value<100 ? -1 : value / 100);
-    ShowDigit('b', x+w, y, ((value/10) %10));
-    ShowDot(x+w+w+2, 29);
-    ShowDigit('m', x+w+w+2+5+2, y+11, value % 10);
+	tft.setFont(&Open_Sans_Condensed_Bold_49);
+    char str[5] = {0};
+    uint8_t n = sprintf(str, "%i", value);
+    tft.write_chars(0,0,80,str, n);
 }
 
 void BikeGUI::UpdateSpeed(uint16_t val)
@@ -72,6 +70,7 @@ void BikeGUI::UpdateTravelDistance(uint16_t val)
     if (IsUint16Updated(csc_distance_, val))
     {
         INFO("~BikeGUI::UpdateTravelDistance() => %u\r\n", val);
+        /*
         uint8_t y = 70;
         uint8_t x = 2;
         uint8_t w = f22_width;
@@ -86,7 +85,7 @@ void BikeGUI::UpdateTravelDistance(uint16_t val)
         ShowDot(x, y + h-dot_height);
         x += (dot_width + 1);
         ShowDigit('m', x, y, val % 10);
-
+*/
     }
 }
 
@@ -126,46 +125,6 @@ void BikeGUI::UpdateDirection(uint8_t dir)
     }
 }
 
-
-const uint8_t* BikeGUI::GetDigit(int8_t digit, const unsigned char* data, uint16_t offset) 
-{
-    const uint8_t *p = NULL;
-    if(digit>=0 && digit<=9) {
-        return data+(offset*digit); // 850
-    }
-    return p;
-}
-// 14*21 = 294.. 42
-
-
-void BikeGUI::ShowDigit(uint8_t ch, uint8_t x, uint8_t y, int8_t digit)
-{
-    const uint8_t *ptr = NULL;
-    int16_t w, h;
-    switch(ch) {
-        case 'b': 
-        ptr = GetDigit(digit, f36_bits, 136);
-        w = f36_width;
-        h = f36_height/10;
-        break;
-        case 'm': 
-        ptr = GetDigit(digit, f22_bits, 42);
-        w = f22_width;
-        h = f22_height/10;
-        break;
-        default:
-        break;
-    }
-    
-    if (ptr)
-    {
-        tft.drawXBitmap2(x, y, ptr, w, h, Adafruit_ST7735::Color565(255, 255, 255));
-    } 
-    else 
-    {
-//        tft.fillRect(x, y, f36_width, f36_height/10, Adafruit_ST7735::Color565(0, 0, 0));
-    }
-}
 
 void BikeGUI::UpdateDistance(uint32_t distance)
 {
