@@ -37,5 +37,13 @@ static bool IsStringUpdated(uint8_t* oldVal, uint8_t* newVal, uint8_t len)
     return false;
 }
 
+static bool IsBoolUpdated(bool & oldVal, bool newVal) {
+    if(oldVal != newVal) {
+        oldVal = newVal;
+        return true;
+    }
+    return false;
+}
+
 
 #endif

@@ -19,9 +19,9 @@ void BLEAppKomoot::OnCharacteristicDescriptorsFinished(const CharacteristicDescr
 
 void BLEAppKomoot::UpdateGUI()
 {
-    gui_->UpdateDirection(direction_);
-    gui_->UpdateDistance(distance_);
-    gui_->UpdateStreet(street_);
+    gui_->UpdateKomootDirection(direction_);
+    gui_->UpdateKomootDistance(distance_);
+    gui_->UpdateKomootStreet(street_);
 }
 
 void BLEAppKomoot::ProcessData(const uint8_t *data, uint32_t len)

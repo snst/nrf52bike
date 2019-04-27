@@ -8,7 +8,7 @@
 #ifdef ENABLE_DEBUG_PRINT
 #define DBG(...)             \
     {                        \
-        printf(__VA_ARGS__); \
+        ::printf(__VA_ARGS__); \
     }
 #else
 #define DBG(...)
@@ -17,7 +17,7 @@
 #ifdef ENABLE_FLOW_PRINT
 #define FLOW(...)            \
     {                        \
-        printf(__VA_ARGS__); \
+        ::printf(__VA_ARGS__); \
     }
 #else
 #define FLOW(...)
@@ -26,7 +26,7 @@
 #ifdef ENABLE_INFO_PRINT
 #define INFO(...)            \
     {                        \
-        printf(__VA_ARGS__); \
+        ::printf(__VA_ARGS__); \
     }
 #else
 #define INFO(...)

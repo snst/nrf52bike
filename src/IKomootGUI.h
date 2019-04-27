@@ -8,9 +8,9 @@
 class IKomootGUI
 {
 public:
-  virtual void UpdateDirection(uint8_t dir) = 0;
-  virtual void UpdateDistance(uint32_t distance) = 0;
-  virtual void UpdateStreet(uint8_t *street) = 0;
+  virtual void UpdateKomootDirection(uint8_t dir) = 0;
+  virtual void UpdateKomootDistance(uint32_t distance) = 0;
+  virtual void UpdateKomootStreet(uint8_t *street) = 0;
 };
 
 #endif

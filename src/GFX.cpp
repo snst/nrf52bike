@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "mbed.h"
 #include "GFX.h"
 #include "glcdfont.c"
+#include "tracer.h"
 
 
 // Many (but maybe not all) non-AVR board installs define macros
@@ -877,7 +878,7 @@ size_t GFX::write(uint8_t c) {
     return 1;
 }
 
-uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y)
+uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, uint16_t font_height)
 {
 	uint16_t *ptr_in = ptr;
  	uint8_t  *bitmap = (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
@@ -890,16 +891,13 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y)
 	uint8_t  xx, yy, bits = 0, bit = 0;
 	int16_t  xo16 = 0, yo16 = 0;
 
-	uint16_t skip_y = 30 - h;
+	uint16_t skip_y = font_height - h;
 	if (y < skip_y)
 		return w;
 	y -= skip_y;
 
 	for (uint8_t sy = 0; sy < y+1; sy++) {
-		/*
-		for (xx = 0; xx < xa; xx++) {
-			ptr++;
-		}*/
+
 		for (xx = 0; xx < w; xx++) {
 			if (!(bit++ & 7)) {
 				bits = pgm_read_byte(&bitmap[bo++]);
@@ -918,8 +916,26 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y)
 	return ptr - ptr_in;
 }
 
+uint16_t GFX::get_chars_len(const char* chars, uint16_t len)
+{
+    uint16_t width = 0;
+	uint8_t first = pgm_read_byte(&gfxFont->first);
+    for (uint16_t i = 0; i < len; i++) {
+        GFXglyph *glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[chars[i] - first]);
+        uint8_t w = pgm_read_byte(&glyph->width);
+        uint8_t xo = pgm_read_byte(&glyph->xOffset);
+        if (xo > 0 || i != 0) {
+            width += xo;
+        }
+        width += w;
+    }
+    return width;
+}
+
 void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len)
 {
+    uint16_t char_width = get_chars_len(chars, len);
+    uint16_t skip_x = ow - 2 - char_width;
 	uint8_t first = pgm_read_byte(&gfxFont->first);
 	uint16_t* buffer = (uint16_t*) malloc(ow * 2);
 	uint16_t* ptr = buffer;
@@ -930,7 +946,7 @@ void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, 
 	if (buffer) {
 		for (uint8_t y = 0; y < h; y++) {
 			memset(buffer, 0, ow * 2);
-			ptr = buffer;
+			ptr = buffer + skip_x;
 
 			for (uint16_t i = 0; i < len; i++) {
 				glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[chars[i] - first]);
@@ -938,8 +954,9 @@ void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, 
 				if (xo > 0 || i != 0) {
 					ptr += xo;
 				}
-				ptr += drawCharLine(ptr, glyph, y);
+				ptr += drawCharLine(ptr, glyph, y, h);
 			}
+            
 			drawBuffer(ox, oy + y, (uint8_t*)buffer, ow);
 		}
 		free(buffer);

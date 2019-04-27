@@ -26,7 +26,7 @@ inline uint16_t swapcolor(uint16_t x)
 
 // Constructor
 Adafruit_ST7735::Adafruit_ST7735(PinName mosi, PinName miso, PinName sck, PinName cs, PinName rs, PinName rst)
-    : lcdPort(mosi, miso, sck), _cs(cs), _rs(rs), _rst(rst), Adafruit_GFX(ST7735_TFTWIDTH_80, ST7735_TFTHEIGHT_160)
+    : lcdPort(mosi, miso, sck), _cs(cs), _rs(rs), _rst(rst), GFX(ST7735_TFTWIDTH_80, ST7735_TFTHEIGHT_160)
 {
 }
 

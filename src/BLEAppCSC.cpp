@@ -6,6 +6,7 @@
 
 BLEAppCSC::BLEAppCSC(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface)
     : BLEAppBase(event_queue, timer, ble_interface, "CSC"), is_init_(false), total_wheel_rounds_(0)
+    , total_travel_time_ms_(0), wheel_size_cm_(217.0), is_riding_(false)
 {
     FindCharacteristic(0x2A5B);
 }
@@ -22,9 +23,12 @@ void BLEAppCSC::OnCharacteristicDescriptorsFinished(const CharacteristicDescript
 
 void BLEAppCSC::UpdateGUI()
 {
-    gui_->UpdateSpeed(speed_);
+    double dist_cm = wheel_size_cm_ * total_wheel_rounds_;
+    gui_->UpdateIsRiding(is_riding_);
+    gui_->UpdateSpeed(speed_kmhX10_);
     gui_->UpdateCadence(cadence_);
-    gui_->UpdateTravelDistance(total_wheel_rounds_);
+    gui_->UpdateTravelDistance((uint32_t)dist_cm); // cm
+    gui_->UpdateTravelTime(total_travel_time_ms_ / 1000); // sec
 }
 
 void BLEAppCSC::ProcessData(const uint8_t *data, uint32_t len)
@@ -52,53 +56,53 @@ void BLEAppCSC::ProcessData(const uint8_t *data, uint32_t len)
         {
             csc.crankCounter = data[p++];
             csc.crankCounter |= data[p++] << 8;
-            csc.lastCrankEvent = data[p++];
-            csc.lastCrankEvent |= data[p++] << 8;
+            csc.crankEvent = data[p++];
+            csc.crankEvent |= data[p++] << 8;
         }
 
         uint32_t now = timer_.read_ms();
         if (is_init_)
         {
-            double wheel_size = 2.170;
-            uint32_t delta_ms = now - last_timestamp_;
-            uint32_t wheel_counter_diff = csc.wheelCounter - last_csc.wheelCounter;
-            uint32_t wheel_event_diff = csc.wheelEvent - last_csc.wheelEvent;
+            uint32_t delta_ms = now - last_timestamp_ms_;
+            uint32_t wheel_counter_diff = csc.wheelCounter - last_csc_.wheelCounter;
+            uint32_t wheel_event_diff = csc.wheelEvent - last_csc_.wheelEvent;
             double delta_sec = wheel_event_diff / 1024.0;
-            double speed = 0.0f;
+            double speed_kmh = 0.0f;
 
+            is_riding_ = wheel_counter_diff > 0;
             total_wheel_rounds_ += wheel_counter_diff;
 
             if (delta_sec > 0.0f)
             {
-                speed = (wheel_size * wheel_counter_diff * 3.6f) / delta_sec;
+                // cm/sec * 3600 / 100 / 1000
+                speed_kmhX10_ = (uint16_t)((wheel_size_cm_ * wheel_counter_diff * 3.6f) / delta_sec / 10.0f);
+            } else {
+                speed_kmhX10_ = 0;
             }
 
-            INFO("wc=%u, we=%u, dwc=%u, dwe=%u, ms=%u, s=%f, r=%u, kmh=%f\r\n",
-            csc.wheelCounter, csc.wheelEvent, wheel_counter_diff, wheel_event_diff,
-            delta_ms, delta_sec, total_wheel_rounds_, speed
-            );
+            uint32_t crank_counter_diff = csc.crankCounter - last_csc_.crankCounter;
+            uint32_t crank_event_diff = csc.crankEvent - last_csc_.crankEvent;
+            double crank_delta_sec = crank_event_diff / 1024.0;
 
-            speed_ = (uint16_t)(speed*10);
+            if (crank_delta_sec > 0.0f)
+            {
+                cadence_ = crank_counter_diff * 60.0f / crank_delta_sec;
+            }
 
-/*
-            float crank_counter_diff = csc.crankCounter - last_csc.crankCounter;
+            INFO("wc=%u, we=%u, dwc=%u, dwe=%u, ms=%u, s=%f, r=%u\r\n",
+                csc.wheelCounter, csc.wheelEvent, wheel_counter_diff, wheel_event_diff,
+                delta_ms, delta_sec, total_wheel_rounds_);
 
-            INFO("val: wc=%u, we=%u, cc=%u, ce=%u\r\n", csc.wheelCounter, csc.wheelEvent, csc.crankCounter, csc.lastCrankEvent);
-            INFO("dif: wc=%u, we=%u, cc=%u, ce=%u\r\n",
-                 (uint32_t)wheel_counter_diff,
-                 csc.wheelEvent - last_csc.wheelEvent,
-                 (uint32_t)crank_counter_diff,
-                 csc.lastCrankEvent - last_csc.lastCrankEvent);
+            if (is_riding_) {
+                total_travel_time_ms_ += delta_ms;
+            } 
 
-            cadence_ = (uint16_t)(crank_counter_diff * 60000.0f / delta_ms);
-            */
-            //speed_ = (uint16_t)(wheel * wheel_counter_diff * 36000.0f / delta_ms);
-
-            INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min\r\n\r\n", now, delta_ms, speed_ / 10.0f, (uint16_t)cadence_);
+            INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n\r\n"
+            , now, delta_ms, speed_kmhX10_ / 10.0f, (uint16_t)cadence_, total_travel_time_ms_/1000);
         }
 
-        last_timestamp_ = now;
-        last_csc = csc;
+        last_timestamp_ms_ = now;
+        last_csc_ = csc;
         is_init_ = true;
 
         event_queue_.call(mbed::callback(this, &BLEAppCSC::UpdateGUI));

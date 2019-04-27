@@ -20,14 +20,17 @@ class BLEAppCSC : public BLEAppBase
         uint32_t wheelCounter;
         uint16_t wheelEvent;
         uint16_t crankCounter;
-        uint16_t lastCrankEvent;
+        uint16_t crankEvent;
     } cscResponse_t;
 
-    cscResponse_t last_csc;
-    uint32_t last_timestamp_;
-    uint16_t speed_;
+    cscResponse_t last_csc_;
+    uint32_t last_timestamp_ms_;
+    uint16_t speed_kmhX10_;
     uint16_t cadence_;
     uint32_t total_wheel_rounds_;
+    uint32_t total_travel_time_ms_;
+    bool is_riding_;
+    double wheel_size_cm_;
     bool is_init_;
 };
 
