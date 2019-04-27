@@ -455,21 +455,11 @@ void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   if ((y + h - 1) >= _height)
     h = _height - y;
 
-  setAddrWindow(x, y, x + w - 0, y + h - 0);
+  setAddrWindow(x, y, x + w, y + h);
 
   //uint8_t hi = color >> 8, lo = color;
   _rs = 1;
   _cs = 0;
-/*
-    for (y = h; y > 0; y--)
-    {
-      for (x = w; x > 0; x--)
-      {
-        lcdPort.write(hi);
-        lcdPort.write(lo);
-      }
-    }
-*/
 
   uint16_t *buf = (uint16_t *)malloc(2 * w);
   if (buf)
@@ -479,8 +469,10 @@ void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
       buf[k] = col;
     }
     //memset(buf, 0, 2*w);
-    for (y = h; y > 0; y--)
+    for (y = h; y > 0; y--) {
+//      setAddrWindow(x, y, x + w, y + 1);
       lcdPort.write((const char*)buf, 2*w, NULL, 0);
+    }
     /*
     for (y = h; y > 0; y--)
     {
