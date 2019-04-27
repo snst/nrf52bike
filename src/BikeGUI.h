@@ -41,8 +41,6 @@ protected:
 
   void ShowValue(uint8_t x, uint8_t y, uint32_t value);
   void SetCursor(uint8_t x, uint8_t y, uint8_t size);
-  void ShowDigit(uint8_t ch, uint8_t x, uint8_t y, int8_t digit);
-  const uint8_t* GetDigit(int8_t digit, const unsigned char* data, uint16_t offset);
   void ShowSpeed(uint8_t x, uint8_t y, uint16_t value);
   void ShowDot(uint8_t x, uint8_t y);
 
