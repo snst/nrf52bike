@@ -72,11 +72,7 @@ void BLEManager::OnHVX(const GattHVXCallbackParams *params)
     {
         app->OnHVX(params);
     } 
-    //event_queue_.call_in(100, mbed::callback(this, &BLEManager::ConnectDevices));
 }
-//void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params) {
-//    ::OnAdvertisement(params);
-//}
 
 void BLEManager::OnServiceDiscoveryFinished(Gap::Handle_t handle)
 {
@@ -128,11 +124,19 @@ void BLEManager::CheckScanStop()
 
     if (csc_app.HaveFoundDevice() && komoot_app.HaveFoundDevice())
     {
+        Gui()->SetGuiMode(BikeGUI::eHybrid);
         StopScan();
         Gui()->Log("Stop scanning\n");
     }
     else if (isTimeout && (csc_app.HaveFoundDevice() || komoot_app.HaveFoundDevice()))
     {
+        if(csc_app.HaveFoundDevice()) {
+            Gui()->SetGuiMode(BikeGUI::eCsc);
+        } else if(komoot_app.HaveFoundDevice()) {
+            Gui()->SetGuiMode(BikeGUI::eKomoot);
+        } else {
+            Gui()->SetGuiMode(BikeGUI::eStartup);
+        }
         Gui()->Log("Scan timeout\n");
         StopScan();
     }
@@ -155,22 +159,9 @@ void BLEManager::OnScanStopped()
     INFO("~BLEManager::OnScanStopped()\r\n");
     Gui()->Operational();
     event_queue_.call_every(1000, mbed::callback(this, &BLEManager::ConnectDevices));
-    //csc_app.Connect();
-    //komoot_app.Connect();
-    //event_queue_.call_in(5000, mbed::callback(&csc_app, &BLEAppCSC::Connect));
 }
 
 void BLEManager::OnAppReady(BLEAppBase *app)
 {
     INFO("~BLEManager::OnAppReady() app=%p\r\n", app);
-    /*
-    INFO("~BLEManager::OnAppReady() app=%p\r\n", app);
-    if (app == &csc_app)
-    {
-        INFO("==> CSC ready\r\n");
-    }
-    else if (app == &komoot_app)
-    {
-        INFO("==> komoot ready\r\n");
-    }*/
 }
