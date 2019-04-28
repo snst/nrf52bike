@@ -43,6 +43,7 @@ void BikeGUI::UpdateAverageSpeed()
     uint16_t average_kmhX10 = 0;
     if (csc_travel_time_sec > 0.0f)
     {
+        // cm / 100 * 3.6
         average_kmhX10 = (uint16_t)(0.36f * csc_total_distance_cm / csc_travel_time_sec);
     }
 
@@ -57,8 +58,11 @@ void BikeGUI::UpdateAverageSpeed()
 
 void BikeGUI::UpdateIsRiding(bool active)
 {
-    csc_is_riding_ = active;
-    INFO("UpdateIsRiding %d-%d\r\n", csc_travel_time_riding_, csc_is_riding_);
+    if (IsBoolUpdated(csc_is_riding_, active))
+    {
+        INFO("UpdateIsRiding %d\r\n", active);
+        layout_->UpdateIsRiding(active);
+    }
 }
 
 void BikeGUI::UpdateTravelDistance(uint32_t distance_cm)

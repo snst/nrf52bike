@@ -58,4 +58,8 @@ void GUILayoutCSC::UpdateTravelTimeStr(uint32_t time_sec, const char* str, uint8
 
 
 void GUILayoutCSC::UpdateIsRiding(bool active)
-{}
+{
+    if(!active) {
+        tft_.fillRect(0,Y_TRAVEL_DISTANCE, 10,10, Adafruit_ST7735::Color565(255, 0, 0) );
+    }
+}

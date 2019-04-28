@@ -12,7 +12,7 @@ void GUILayoutKomoot::UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uin
 {
     tft_.setFont(&Open_Sans_Condensed_Bold_31);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft_.write_chars(0, 130, 80, str, len);
+    //tft_.write_chars(0, 130, 80, str, len);
 }
 
 
@@ -28,16 +28,20 @@ void GUILayoutKomoot::UpdateKomootDirection(uint8_t dir)
 
 void GUILayoutKomoot::UpdateKomootDistanceStr(uint32_t distance, const char* str, uint8_t len)
 {
-    tft_.setFont(&Open_Sans_Condensed_Bold_49);
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft_.write_chars(0, 85, 80, str, len);
+    tft_.write_chars(0, 130, 80, str, len);
 }
 
 
 void GUILayoutKomoot::UpdateKomootStreet(uint8_t *street)
 {
+    /*
     tft_.setFont(NULL);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     tft_.setCursor(0, 120);
-    tft_.printf((const char*)street);
+    tft_.printf((const char*)street);*/
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
+    tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_.WriteString(0,80,80,80,(char*)street);
 }

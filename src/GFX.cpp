@@ -932,10 +932,17 @@ uint16_t GFX::get_chars_len(const char* chars, uint16_t len)
     return width;
 }
 
-void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len)
+GFXglyph * GFX::GetGlyph(char ch)
+{
+	uint8_t first = pgm_read_byte(&gfxFont->first);
+    GFXglyph *glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[ch - first]);
+    return glyph;
+}
+
+void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, bool align_right)
 {
     uint16_t char_width = get_chars_len(chars, len);
-    uint16_t skip_x = ow - 2 - char_width;
+    uint16_t skip_x = align_right ? (ow - border - char_width) : border;
 	uint8_t first = pgm_read_byte(&gfxFont->first);
 	uint16_t* buffer = (uint16_t*) malloc(ow * 2);
 	uint16_t* ptr = buffer;
@@ -961,7 +968,31 @@ void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, 
 		}
 		free(buffer);
 	}
+}
 
+void GFX::WriteString(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* str, uint16_t linespace) 
+{
+    uint16_t height = GetGlyph('A')->height;
+    uint16_t len = strlen(str);
+    uint16_t start = 0;
+    uint16_t yy=0;
+    INFO("street: h=%i, len=%d, %s\r\n", height, len, str);
+    while ((len > 0) && ((yy+height) <= h))
+    {
+        uint16_t n;
+        for (n=0; n<len; n++) {
+            uint16_t l = get_chars_len(&str[start], n);
+            INFO("st: start=%d, n=%d, l=%d\r\n", start, n, l);
+            if (l > w) {
+                n--;
+                break;
+            }
+        }
+        write_chars(x, y+yy, w, &str[start], n, 0, false);
+        start += n;
+        len -= n;
+        yy += (height + linespace);
+    }
 }
 
 /**************************************************************************/

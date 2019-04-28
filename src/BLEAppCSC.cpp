@@ -24,11 +24,11 @@ void BLEAppCSC::OnCharacteristicDescriptorsFinished(const CharacteristicDescript
 void BLEAppCSC::UpdateGUI()
 {
     double dist_cm = wheel_size_cm_ * total_wheel_rounds_;
-    gui_->UpdateIsRiding(is_riding_);
     gui_->UpdateSpeed(speed_kmhX10_);
     gui_->UpdateCadence(cadence_);
     gui_->UpdateTravelDistance((uint32_t)dist_cm); // cm
     gui_->UpdateTravelTime(total_travel_time_ms_ / 1000); // sec
+    gui_->UpdateIsRiding(is_riding_);
 }
 
 void BLEAppCSC::ProcessData(const uint8_t *data, uint32_t len)
