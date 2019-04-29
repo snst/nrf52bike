@@ -93,7 +93,7 @@ class GFX : public Stream {
 
   virtual size_t write(uint8_t);
 
-  uint16_t drawCharLine(uint16_t* ptr, GFXglyph *glyph, uint8_t y, uint16_t font_height);
+  uint16_t drawCharLine(uint16_t* ptr, GFXglyph *glyph, uint8_t y, int16_t font_height);
   void write_chars(uint16_t x, uint16_t y, uint16_t w, const char* chars, uint16_t len, uint8_t border = 2, bool align_right = true);
   uint16_t get_chars_len(const char* chars, uint16_t len);
   void WriteString(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* str,  uint16_t linespace=2);

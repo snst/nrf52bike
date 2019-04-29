@@ -878,7 +878,7 @@ size_t GFX::write(uint8_t c) {
     return 1;
 }
 
-uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, uint16_t font_height)
+uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t font_height)
 {
 	uint16_t *ptr_in = ptr;
  	uint8_t  *bitmap = (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
@@ -891,9 +891,10 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, uint16_t f
 	uint8_t  xx, yy, bits = 0, bit = 0;
 	int16_t  xo16 = 0, yo16 = 0;
 
-	uint16_t skip_y = font_height - h;
+	int16_t skip_y = font_height - h;
 	if (y < skip_y)
 		return w;
+        
 	y -= skip_y;
 
 	for (uint8_t sy = 0; sy < y+1; sy++) {
