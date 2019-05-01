@@ -1,138 +1,166 @@
 #include "UIMain.h"
 #include "gfxfont.h"
-#include "val.h"
 #include "tracer.h"
+#include "icons.h"
+#include "../font/Open_Sans_Condensed_Bold_31.h"
+#include "../font/Open_Sans_Condensed_Bold_49.h"
 
 DigitalOut display_led((PinName)11);
 
+#define Y_CSC_SPEED 0u
+#define Y_CSC_AVERAGE_SPEED (Y_CSC_SPEED + 40u)
+#define Y_CSC_CADENCE (Y_CSC_AVERAGE_SPEED + 40u)
+#define Y_CSC_TRAVEL_DISTANCE (Y_CSC_CADENCE + 26u)
+#define Y_CSC_TRAVEL_TIME (Y_CSC_TRAVEL_DISTANCE + 26u)
+
 UIMain::UIMain()
-    : csc_bat_(0xFF)
-    , gui_mode_(eStartup), layout_csc_(tft), layout_komoot_(tft)
+    : csc_bat_(0xFF), gui_mode_(eStartup)
 {
-    tft.initR(INITR_MINI160x80);
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft.setCursor(0, 5);
-    tft.setTextWrap(true);
-    tft.setFont(NULL);
-    layout_ = &layout_csc_;
-    display_led = 0;
+    tft_.initR(INITR_MINI160x80);
+    tft_.fillScreen(ST77XX_BLACK);
+    tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_.setCursor(0, 5);
+    tft_.setTextWrap(true);
+    tft_.setFont(NULL);
+    display_led = 0; // enable display led
 }
 
-uint8_t UIMain::FormatSpeed(char* str, uint16_t speed_kmhX10)
+void UIMain::Update(const ISinkCsc::CscData_t &data)
 {
-    uint8_t len = 0;
-    if (speed_kmhX10 <= 999)
+    switch (gui_mode_)
     {
-        len = sprintf(str, "%i.%i", speed_kmhX10 / 10, speed_kmhX10 % 10);
-    }
-    return len;
-}
-
-void UIMain::Update(const CscData_t& data)
-{
-    INFO("UIMain::Update, %u, %u\r\n", csc_data_.speed_kmhX10 , data.speed_kmhX10);
-    char str[10];
-    if (IsUint16Updated(csc_data_.speed_kmhX10 , data.speed_kmhX10))
-    {
-        INFO("~UIMain::UpdateSpeed() => %u\r\n", data.speed_kmhX10);
-        uint8_t len = FormatSpeed(str, data.speed_kmhX10);
-        layout_->UpdateSpeedStr(data.speed_kmhX10, str, len);
-    }
-
-    if (IsUint16Updated(csc_data_.filtered_speed_kmhX10 , data.filtered_speed_kmhX10))
-    {
-        INFO("~UIMain::UpdateFilteredSpeed() => %u\r\n", data.filtered_speed_kmhX10);
-        uint8_t len = FormatSpeed(str, data.filtered_speed_kmhX10);
-        layout_->UpdateAverageSpeedStr(data.filtered_speed_kmhX10, str, len);
-    }
-/*
-    if (IsUint16Updated(csc_data_.average_speed_kmhX10 , data.average_speed_kmhX10))
-    {
-        INFO("~UIMain::UpdateAverageSpeed() => %u\r\n", data.average_speed_kmhX10);
-        uint8_t len = FormatSpeed(str, data.average_speed_kmhX10);
-        layout_->UpdateAverageSpeedStr(data.average_speed_kmhX10, str, len);
-    }*/
-
-
-    if (IsUint32Updated(csc_data_.distance_cm, data.distance_cm))
-    {
-        INFO("~UIMain::UpdateTravelDistance() => %u\r\n", data.distance_cm);
-        uint8_t len = sprintf(str, "%i.%i", data.distance_cm / 100, (data.distance_cm % 100) / 10);
-        layout_->UpdateTravelDistanceStr(data.distance_cm, str, len);
-    }
-
-    if (IsUint16Updated(csc_data_.cadence, data.cadence))
-    {
-        INFO("~UIMain::UpdateCadence() => %u\r\n", data.cadence);
-        uint8_t len = sprintf(str, "%i", data.cadence);
-        layout_->UpdateCadenceStr(data.cadence, str, len);
-    }
-
-    if (IsUint32Updated(csc_data_.time_ms, data.time_ms))
-    {
-        INFO("~UIMain::UpdateTravelTime() => %u\r\n", data.time_ms);
-        uint8_t len = sprintf(str, "%i:%.2i", data.time_ms / 60000, (data.time_ms/1000) % 60);
-        layout_->UpdateTravelTimeStr(data.time_ms / 1000, str, len);
-    }
-
-    if (IsBoolUpdated(csc_data_.is_riding, data.is_riding))
-    {
-        INFO("UpdateIsRiding %d\r\n", data.is_riding);
-        layout_->UpdateIsRiding(data.is_riding);
+    case eCsc:
+        if (data.filtered_speed_kmhX10_updated)
+        {
+            DrawSpeed(Y_CSC_SPEED, data.filtered_speed_kmhX10);
+        }
+        if (data.average_speed_kmhX10_updated)
+        {
+            DrawSpeed(Y_CSC_AVERAGE_SPEED, data.average_speed_kmhX10);
+        }
+        if (data.cadence_updated)
+        {
+            DrawCadence(Y_CSC_CADENCE, data.cadence);
+        }
+        if (data.trip_distance_cm_updated)
+        {
+            DrawDistance(Y_CSC_TRAVEL_DISTANCE, data.trip_distance_cm / 100);
+        }
+        if (data.trip_time_ms_updated || data.is_riding_updated)
+        {
+            uint16_t color = data.is_riding ? Adafruit_ST7735::Color565(255, 255, 255) : Adafruit_ST7735::Color565(255, 0, 0);
+            DrawTime(Y_CSC_TRAVEL_TIME, data.trip_time_ms / 1000, color);
+        }
+        break;
+    case eKomoot:
+    default:
+        break;
     }
 }
 
-
-void UIMain::UpdateKomootDirection(uint8_t dir)
+void UIMain::Update(const ISinkKomoot::KomootData_t &data)
 {
-    if (IsUint8Updated(komoot_direction_, dir))
+    switch (gui_mode_)
     {
-        INFO("~UIMain::UpdateKomootDirection() => %u\r\n", dir);
-        layout_->UpdateKomootDirection(dir);
-    }
-}
-
-void UIMain::UpdateKomootDistance(uint32_t distance)
-{
-    if (IsUint32Updated(komoot_distance_, distance))
-    {
-        INFO("~UIMain::UpdateKomootDistance() => %u\r\n", distance);
-        char str[10] = {0};
-        uint8_t len = sprintf(str, "%i", distance);
-        layout_->UpdateKomootDistanceStr(distance, str, len);
-    }
-}
-
-void UIMain::UpdateKomootStreet(uint8_t *street)
-{
-    if (IsStringUpdated(komoot_street_, street, sizeof(komoot_street_)))
-    {
-        INFO("~UIMain::UpdateKomootStreet() => %s\r\n", street);
-        layout_->UpdateKomootStreet(street);
+    case eCsc:
+        break;
+    case eHybrid:
+    case eKomoot:
+        if (data.direction_updated)
+        {
+            const uint8_t *ptr = GetNavIcon(data.direction);
+            if (ptr)
+            {
+                tft_.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
+            }
+        }
+        if (data.distance_m_updated)
+        {
+            char str[10] = {0};
+            uint8_t len = sprintf(str, "%i", data.distance_m);
+            tft_.setFont(&Open_Sans_Condensed_Bold_31);
+            tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+            tft_.write_chars(0, 130, 80, str, len);
+        }
+        if (data.street_updated)
+        {
+            tft_.setFont(&Open_Sans_Condensed_Bold_31);
+            tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+            tft_.WriteString(0, 80, 80, 80, (char *)data.street);
+        }
+    default:
+        break;
     }
 }
 
 void UIMain::Log(const char *str)
 {
-    tft.printf("%s", str);
+    tft_.printf("%s", str);
 }
 
 void UIMain::Operational()
 {
-    tft.fillScreen(ST77XX_BLACK);
+    tft_.fillScreen(ST77XX_BLACK);
 }
 
 void UIMain::SetGuiMode(eGuiMode_t mode)
 {
-    switch(mode) {
-        case eCsc:
-        layout_ = &layout_csc_;
-        break;
-        case eKomoot:
-        default:
-        layout_ = &layout_komoot_;
-        break;
-    }
     gui_mode_ = mode;
+}
+
+void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
+{
+    char str[10];
+    uint16_t len = sprintf(str, ".%i", speed_kmhX10 % 10);
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
+    tft_.setTextColor(color);
+    tft_.write_chars(56, y + 12, 20, str, len, 0, false);
+
+    len = sprintf(str, "%i", speed_kmhX10 / 10);
+    tft_.setFont(&Open_Sans_Condensed_Bold_49);
+    tft_.write_chars(0, y, 56, str, len);
+
+    /*
+    tft_.setFont(&Open_Sans_Condensed_Bold_49);
+    tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_.write_chars(0, Y_SPEED, 80, str, len);
+    */
+}
+
+void UIMain::DrawCadence(uint16_t y, uint16_t cadence)
+{
+    char str[10];
+    uint16_t len = sprintf(str, "%i", cadence);
+
+    if (cadence < 80)
+        tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    else if (cadence > 95)
+        tft_.setTextColor(Adafruit_ST7735::Color565(255, 0, 0));
+    else
+        tft_.setTextColor(Adafruit_ST7735::Color565(0, 255, 0));
+
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
+    tft_.write_chars(0, y, 80, str, len);
+}
+
+void UIMain::DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color)
+{
+    char str[14];
+    uint8_t hour = trip_time_sec / 3660;
+    uint8_t min = (trip_time_sec / 60) % 60;
+    uint8_t sec = trip_time_sec % 60;
+    uint8_t len = sprintf(str, "%i:%.2i", hour, min);
+    tft_.setTextColor(color);
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
+    tft_.write_chars(0, y, 80, str, len);
+}
+
+void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
+{
+    char str[10];
+    uint16_t km = trip_distance_m / 1000;
+    uint8_t len = sprintf(str, "%i.%.2i", km, (trip_distance_m % 1000) / 10);
+    tft_.setTextColor(color);
+    tft_.setFont(&Open_Sans_Condensed_Bold_31);
+    tft_.write_chars(0, y, 80, str, len);
 }

@@ -4,12 +4,12 @@
 #include "BleAppBase.h"
 #include "AppCsc.h"
 
-class IDataCsc;
+class ISinkCsc;
 
 class BleAppCsc : public BleAppBase
 {
   public:
-    BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, IDataCsc* csc_data_);
+    BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkCsc* csc_data_);
     virtual ~BleAppCsc();
     virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params);
     void OnHVX(const GattHVXCallbackParams *params);

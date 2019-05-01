@@ -1,14 +1,14 @@
 #include "AppCsc.h"
-#include "IDataCsc.h"
+#include "ISinkCsc.h"
 #include "tracer.h"
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
 
-AppCsc::AppCsc(IDataCsc *csc)
-    : is_init_(false), csc_sink_(csc), wheel_size_cm_(217.0f)
+AppCsc::AppCsc(ISinkCsc *sink)
+    : is_init_(false), sink_(sink), wheel_size_cm_(217.0f)
 {
-    memset(&csc_data_, 0, sizeof(csc_data_));
+    memset(&data_, 0xFF, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));
 }
 
@@ -19,105 +19,121 @@ AppCsc::~AppCsc()
 void AppCsc::UpdateGUI()
 {
     INFO("AppCsc::UpdateGUI()\r\n");
-    csc_sink_->Update(csc_data_);
+    sink_->Update(data_);
 }
 
-void AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
+bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
 {
+    bool ret = false;
     // 03 6a 0a 00 00 bc 9c ad 00 1b fa**** wc=2666, we=40124, cc=173, ce=64027
     // 03 77 0b 00 00 a5 b9 ad 00 1b fa**** wc=2935, we=47525, cc=173, ce=64027
     if (len == 11)
     {
-        cscResponse_t csc = {0};
+        cscMsg_t msg = {0};
 
         uint8_t p = 0;
-        csc.flags = data[p++];
+        msg.flags = data[p++];
 
-        if (csc.flags & FLAG_WHEEL_PRESENT)
+        if (msg.flags & FLAG_WHEEL_PRESENT)
         {
-            csc.wheelCounter = data[p++];
-            csc.wheelCounter |= data[p++] << 8;
-            csc.wheelCounter |= data[p++] << 16;
-            csc.wheelCounter |= data[p++] << 24;
-            csc.wheelEvent = data[p++];
-            csc.wheelEvent |= data[p++] << 8;
+            msg.wheelCounter = data[p++];
+            msg.wheelCounter |= data[p++] << 8;
+            msg.wheelCounter |= data[p++] << 16;
+            msg.wheelCounter |= data[p++] << 24;
+            msg.wheelEvent = data[p++];
+            msg.wheelEvent |= data[p++] << 8;
         }
 
-        if (csc.flags & FLAG_CRANK_PRESENT)
+        if (msg.flags & FLAG_CRANK_PRESENT)
         {
-            csc.crankCounter = data[p++];
-            csc.crankCounter |= data[p++] << 8;
-            csc.crankEvent = data[p++];
-            csc.crankEvent |= data[p++] << 8;
+            msg.crankCounter = data[p++];
+            msg.crankCounter |= data[p++] << 8;
+            msg.crankEvent = data[p++];
+            msg.crankEvent |= data[p++] << 8;
         }
 
         if (is_init_)
         {
-            uint32_t delta_ms = now_ms - csc_data_.timestamp_ms;
-            uint32_t wheel_counter_diff = csc.wheelCounter - last_csc_.wheelCounter;
-            uint32_t wheel_event_diff = csc.wheelEvent - last_csc_.wheelEvent;
+            uint32_t delta_ms = now_ms - data_.timestamp_ms;
+            uint32_t wheel_counter_diff = msg.wheelCounter - last_msg_.wheelCounter;
+            uint32_t wheel_event_diff = msg.wheelEvent - last_msg_.wheelEvent;
             double delta_sec = wheel_event_diff / 1024.0;
             double speed_kmh = 0.0f;
 
-            csc_data_.is_riding = wheel_counter_diff > 0;
-            csc_data_.total_wheel_rounds += wheel_counter_diff;
+            bool is_riding = wheel_counter_diff > 0;
+            data_.is_riding_updated = data_.is_riding != is_riding;
+            data_.is_riding = is_riding;
 
+            data_.total_wheel_rounds += wheel_counter_diff;
+
+            uint16_t speed_kmhX10 = 0;;
             if (wheel_event_diff)
             {
                 // cm/sec * 3600 / 100 / 1000
-                csc_data_.speed_kmhX10 = (uint16_t)((wheel_size_cm_ * wheel_counter_diff * 3.6f) / delta_sec / 10.0f);
-                INFO("SPEED %u\r\n", wheel_event_diff);
+                speed_kmhX10 = (uint16_t)((wheel_size_cm_ * wheel_counter_diff * 3.6f) / delta_sec / 10.0f);
             }
-            else
-            {
-                csc_data_.speed_kmhX10 = 0;
-                INFO("SPEED 0000!! %u\r\n", wheel_event_diff);
-            }
+            data_.speed_kmhX10_updated = data_.speed_kmhX10 != speed_kmhX10;
+            data_.speed_kmhX10 = speed_kmhX10;
 
-            uint32_t crank_counter_diff = csc.crankCounter - last_csc_.crankCounter;
-            uint32_t crank_event_diff = csc.crankEvent - last_csc_.crankEvent;
+            uint32_t crank_counter_diff = msg.crankCounter - last_msg_.crankCounter;
+            uint32_t crank_event_diff = msg.crankEvent - last_msg_.crankEvent;
             double crank_delta_sec = crank_event_diff / 1024.0;
 
+            uint16_t cadence = 0;
             if (crank_delta_sec > 0.0f)
             {
-                csc_data_.cadence = crank_counter_diff * 60.0f / crank_delta_sec;
+                cadence = crank_counter_diff * 60.0f / crank_delta_sec;
             }
+            data_.cadence_updated = data_.cadence != cadence;
+            data_.cadence = cadence;
 
             INFO("wc=%u, we=%u, dwc=%u, dwe=%u, ms=%u, s=%f, r=%u\r\n",
-                 csc.wheelCounter, csc.wheelEvent, wheel_counter_diff, wheel_event_diff,
-                 delta_ms, delta_sec, csc_data_.total_wheel_rounds);
+                 msg.wheelCounter, msg.wheelEvent, wheel_counter_diff, wheel_event_diff,
+                 delta_ms, delta_sec, data_.total_wheel_rounds);
 
-            if (csc_data_.is_riding)
+            uint32_t trip_time_ms = data_.trip_time_ms;
+            if (data_.is_riding)
             {
-                csc_data_.time_ms += delta_ms;
+                trip_time_ms += delta_ms;
             }
+            data_.trip_time_ms_updated = data_.trip_time_ms != trip_time_ms;
+            data_.trip_time_ms = trip_time_ms;
 
-            INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n\r\n", now_ms, delta_ms, csc_data_.speed_kmhX10 / 10.0f, (uint16_t)csc_data_.cadence, csc_data_.time_ms / 1000);
+            INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n\r\n", now_ms, delta_ms, data_.speed_kmhX10 / 10.0f, (uint16_t)data_.cadence, data_.trip_time_ms / 1000);
 
-            csc_data_.distance_cm = (uint32_t)(wheel_size_cm_ * csc_data_.total_wheel_rounds);
+            uint32_t trip_distance_cm = (uint32_t)(wheel_size_cm_ * data_.total_wheel_rounds);
+            data_.trip_distance_cm_updated = data_.trip_distance_cm != trip_distance_cm;
+            data_.trip_distance_cm = trip_distance_cm;
 
             CalculateAverageSpeed();
         }
 
-        csc_data_.timestamp_ms = now_ms;
-        last_csc_ = csc;
+        data_.timestamp_ms = now_ms;
+        last_msg_ = msg;
         is_init_ = true;
+        ret = true;
     }
+    return ret;
 }
 
 void AppCsc::CalculateAverageSpeed()
 {
-    if (csc_data_.time_ms > 0.0f)
+    uint16_t average_speed_kmhX10 = data_.average_speed_kmhX10;
+    if (data_.trip_time_ms > 0.0f)
     {
         // cm / 100 * 3.6
-        csc_data_.average_speed_kmhX10 = (uint16_t)(1000.0f * 0.36f * csc_data_.distance_cm / csc_data_.time_ms);
+        average_speed_kmhX10 = (uint16_t)(1000.0f * 0.36f * data_.trip_distance_cm / data_.trip_time_ms);
     }
+    data_.average_speed_kmhX10_updated = data_.average_speed_kmhX10 != average_speed_kmhX10;
+    data_.average_speed_kmhX10 = average_speed_kmhX10;
 
-    uint32_t sum = filtered_speed_kmhX10_[0] + csc_data_.speed_kmhX10;
+    uint32_t sum = filtered_speed_kmhX10_[0] + data_.speed_kmhX10;
     for(size_t i=1; i<SPEED_FILTER_VALUES_MAX; i++) {
         sum += filtered_speed_kmhX10_[i];
         filtered_speed_kmhX10_[i-1] = filtered_speed_kmhX10_[i];
     }
-    filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX-1] = csc_data_.speed_kmhX10;
-    csc_data_.filtered_speed_kmhX10 = sum / SPEED_FILTER_VALUES_CNT;
+    filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX-1] = data_.speed_kmhX10;
+    uint16_t filtered_speed_kmhX10 = sum / SPEED_FILTER_VALUES_CNT;
+    data_.filtered_speed_kmhX10_updated = data_.filtered_speed_kmhX10 != filtered_speed_kmhX10;
+    data_.filtered_speed_kmhX10 = filtered_speed_kmhX10;
 }

@@ -1,10 +1,10 @@
 #include "BleAppCsc.h"
-#include "IDataCsc.h"
+#include "ISinkCsc.h"
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
 
-BleAppCsc::BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, IDataCsc* csc_data)
+BleAppCsc::BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkCsc* csc_data)
     : BleAppBase(event_queue, timer, ble_interface, "CSC"),
      csc_(csc_data)
 {
@@ -33,7 +33,8 @@ void BleAppCsc::OnHVX(const GattHVXCallbackParams *params)
 {
     if (params->type == BLE_HVX_NOTIFICATION)
     {
-        csc_.ProcessData(timer_.read_ms(), params->data, params->len);
-        event_queue_.call(mbed::callback(&csc_, &AppCsc::UpdateGUI));
+        if(csc_.ProcessData(timer_.read_ms(), params->data, params->len)) {
+            event_queue_.call(mbed::callback(&csc_, &AppCsc::UpdateGUI));
+        }
     }
 }

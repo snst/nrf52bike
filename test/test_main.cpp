@@ -3,12 +3,11 @@
 #include "TftEmu.h"
 #include "../font/Open_Sans_Condensed_Bold_31.h"
 #include "../font/Open_Sans_Condensed_Bold_49.h"
-#include "IDataCsc.h"
+#include "ISinkCsc.h"
 #include "AppCsc.h"
 
 TEST(font, font1)
 {
-
     TftEmu tft;
     tft.initR(INITR_MINI160x80);
     tft.setFont(&Open_Sans_Condensed_Bold_31);
@@ -22,7 +21,7 @@ int main(int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
-class CscTestData : public IDataCsc
+class CscTestData : public ISinkCsc
 {
   public:
     CscTestData() {}
@@ -40,7 +39,7 @@ TEST(CSC, ProcessData)
     uint8_t d2[] = {0x03, 0x77, 0x0b, 0x00, 0x00, 0xa5, 0xb9, 0xad, 0x00, 0x1b, 0xfa};
 
     csc.ProcessData(5000, d1, sizeof(d1));
-    EXPECT_EQ(2666, csc.last_csc_.wheelCounter);
+    EXPECT_EQ(2666, csc.last_msg_.wheelCounter);
 
     csc.ProcessData(6000, d2, sizeof(d2));
 }
@@ -49,8 +48,8 @@ TEST(CSC, AverageSpeed)
 {
     CscTestData d;
     AppCsc csc(&d);
-    csc.csc_data_.distance_cm = 23*1000*100;
-    csc.csc_data_.time_ms = 30 * 60 * 1000;
+    csc.csc_data_.trip_distance_cm = 23*1000*100;
+    csc.csc_data_.trip_time_ms = 30 * 60 * 1000;
     csc.CalculateAverageSpeed();
     EXPECT_EQ(460, csc.csc_data_.average_speed_kmhX10);
 }
@@ -80,8 +79,5 @@ TEST(CSC, FilteredSpeed)
     csc.csc_data_.speed_kmhX10 = 80;
     csc.CalculateAverageSpeed();
     EXPECT_EQ((50+200+80) / SPEED_FILTER_VALUES_CNT, csc.csc_data_.filtered_speed_kmhX10);
-
-
-    // SPEED_FILTER_VALUES_CNT
 }
 

@@ -28,7 +28,7 @@ static bool IsUint32Updated(uint32_t & oldVal, uint32_t newVal) {
     return false;
 }
 
-static bool IsStringUpdated(uint8_t* oldVal, uint8_t* newVal, uint8_t len)
+static bool IsStringUpdated(uint8_t* oldVal, const uint8_t* newVal, uint8_t len)
 {
     if(memcmp(oldVal, newVal, len)) {
         memcpy(oldVal, newVal, len);
