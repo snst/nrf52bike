@@ -20,18 +20,17 @@
 
 #include "tracer.h"
 
-class BikeGUI;
+class UIMain;
 
 #define MAX_NAME (7u)
 
-class BLEAppBase : private mbed::NonCopyable<BLEAppBase>
+class BleAppBase : private mbed::NonCopyable<BleAppBase>
 {
-  typedef BLEAppBase Self;
+  typedef BleAppBase Self;
 
 public:
-  BLEAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, char* name);
-  virtual ~BLEAppBase();
-  void SetGUI(BikeGUI *gui);
+  BleAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, char* name);
+  virtual ~BleAppBase();
   bool HaveFoundDevice();
   const Gap::Handle_t &GetConnectionHandle();
   bool Connect();
@@ -81,10 +80,8 @@ protected:
   bool found_desc2902_;
   bool found_device_;
   Timer &timer_;
-  BikeGUI *gui_;
   IAppCallback* app_callback_;
   char name_[MAX_NAME+1];
-
 };
 
 #endif

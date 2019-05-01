@@ -2,10 +2,10 @@
 #define IGUI_LAYOUT_H_
 
 #include "mbed.h"
-#include "ICscGUI.h"
-#include "IKomootGUI.h"
+#include "IDataCsc.h"
+#include "IDataKomoot.h"
 
-class IGUILayout
+class IUIMain
 {
 public:
   virtual void UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len) = 0;

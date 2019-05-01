@@ -1,5 +1,5 @@
-#ifndef BLEMANAGERBASE_H_
-#define BLEMANAGERBASE_H_
+#ifndef BleAppBase_H_
+#define BleAppBase_H_
 
 #include "mbed.h"
 #include <stdint.h>
@@ -21,12 +21,12 @@
 
 #include "tracer.h"
 
-class BikeGUI;
+class UIMain;
 
-class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCallback
+class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCallback
 {
 
-    typedef BLEManagerBase Self;
+    typedef BleManagerBase Self;
 
   public:
     template <typename ContextType>
@@ -36,9 +36,9 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
         return makeFunctionPointer(this, member);
     }
 
-    BLEManagerBase(BLE &ble_interface, BikeGUI *gui);
-    virtual ~BLEManagerBase();
-    virtual void OnAppReady(BLEAppBase *app);
+    BleManagerBase(BLE &ble_interface, UIMain *gui);
+    virtual ~BleManagerBase();
+    virtual void OnAppReady(BleAppBase *app);
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
     virtual void OnDataRead(const GattReadCallbackParams *params);
@@ -57,13 +57,13 @@ class BLEManagerBase : private mbed::NonCopyable<BLEManagerBase>, public IAppCal
     void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event);
     void Start();
     bool IsSameId128(const uint8_t *a, const uint8_t *b);
-    BikeGUI *Gui();
+    UIMain *Gui();
 
   protected:
     events::EventQueue event_queue_;
     BLE &ble_;
     Timer timer_;
-    BikeGUI *gui_;
+    UIMain *gui_;
     bool scanning_active_;
     uint32_t start_scan_ms_;
 };

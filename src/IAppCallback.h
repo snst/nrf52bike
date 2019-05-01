@@ -3,12 +3,12 @@
 
 #include "mbed.h"
 
-class BLEAppBase;
+class BleAppBase;
 
 class IAppCallback
 {
 public:
-  virtual void OnAppReady(BLEAppBase *app) = 0;
+  virtual void OnAppReady(BleAppBase *app) = 0;
 };
 
 #endif

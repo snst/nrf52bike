@@ -2,14 +2,14 @@
 #define IGUI_LAYOUT_CSC_H_
 
 #include "mbed.h"
-#include "IGUILayout.h"
+#include "IUIMain.h"
 #include <Adafruit_ST7735.h>
 
-class GUILayoutCSC : public IGUILayout
+class UICsc : public IUIMain
 {
 public:
 
-    GUILayoutCSC(Adafruit_ST7735 & tft);
+    UICsc(Adafruit_ST7735 & tft);
 
   virtual void UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len);
   virtual void UpdateAverageSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len);

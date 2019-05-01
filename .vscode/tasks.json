@@ -14,7 +14,7 @@
         {
             "label": "Build tests",
             "type": "shell",
-            "command": "reset && cmake .. && make",
+            "command": "reset && cmake .. && make && ./biketest",
             "group": "test",
             "options": {
                 "cwd": "${workspaceFolder}/test/build"

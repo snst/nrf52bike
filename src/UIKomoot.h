@@ -2,14 +2,14 @@
 #define IGUI_LAYOUT_KOMOOT_H_
 
 #include "mbed.h"
-#include "IGUILayout.h"
+#include "IUIMain.h"
 #include <Adafruit_ST7735.h>
 
-class GUILayoutKomoot : public IGUILayout
+class UIKomoot : public IUIMain
 {
 public:
 
-  GUILayoutKomoot(Adafruit_ST7735 & tft);
+  UIKomoot(Adafruit_ST7735 & tft);
 
   virtual void UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len);
   virtual void UpdateAverageSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len) {}

@@ -1,4 +1,4 @@
-#include "GUILayoutCSC.h"
+#include "UICsc.h"
 #include "../font/Open_Sans_Condensed_Bold_31.h"
 #include "../font/Open_Sans_Condensed_Bold_49.h"
 
@@ -8,12 +8,12 @@
 #define Y_TRAVEL_DISTANCE (Y_CADENCE + 26u)
 #define Y_TRAVEL_TIME (Y_TRAVEL_DISTANCE + 26u)
 
-GUILayoutCSC::GUILayoutCSC(Adafruit_ST7735 & tft)
+UICsc::UICsc(Adafruit_ST7735 & tft)
 : tft_(tft)
 {}
 
 
-void GUILayoutCSC::UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len)
+void UICsc::UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len)
 {
     tft_.setFont(&Open_Sans_Condensed_Bold_49);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -21,7 +21,7 @@ void GUILayoutCSC::UpdateSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_
 }
 
 
-void GUILayoutCSC::UpdateAverageSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len)
+void UICsc::UpdateAverageSpeedStr(uint16_t speed_kmhX10, const char* str, uint8_t len)
 {
     tft_.setFont(&Open_Sans_Condensed_Bold_49);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -29,7 +29,7 @@ void GUILayoutCSC::UpdateAverageSpeedStr(uint16_t speed_kmhX10, const char* str,
 }
 
 
-void GUILayoutCSC::UpdateCadenceStr(uint16_t cadence, const char* str, uint8_t len)
+void UICsc::UpdateCadenceStr(uint16_t cadence, const char* str, uint8_t len)
 {
    if (cadence >= 100 && cadence <= 110)
         tft_.setTextColor(Adafruit_ST7735::Color565(0, 255, 0));
@@ -41,7 +41,7 @@ void GUILayoutCSC::UpdateCadenceStr(uint16_t cadence, const char* str, uint8_t l
 }
 
 
-void GUILayoutCSC::UpdateTravelDistanceStr(uint32_t distance_cm, const char* str, uint8_t len)
+void UICsc::UpdateTravelDistanceStr(uint32_t distance_cm, const char* str, uint8_t len)
 {
     tft_.setFont(&Open_Sans_Condensed_Bold_31);
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -49,7 +49,7 @@ void GUILayoutCSC::UpdateTravelDistanceStr(uint32_t distance_cm, const char* str
 }
 
 
-void GUILayoutCSC::UpdateTravelTimeStr(uint32_t time_sec, const char* str, uint8_t len)
+void UICsc::UpdateTravelTimeStr(uint32_t time_sec, const char* str, uint8_t len)
 {
     tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     tft_.setFont(&Open_Sans_Condensed_Bold_31);
@@ -57,7 +57,7 @@ void GUILayoutCSC::UpdateTravelTimeStr(uint32_t time_sec, const char* str, uint8
 }
 
 
-void GUILayoutCSC::UpdateIsRiding(bool active)
+void UICsc::UpdateIsRiding(bool active)
 {
     if(!active) {
         tft_.fillRect(0,Y_TRAVEL_DISTANCE, 10,10, Adafruit_ST7735::Color565(255, 0, 0) );

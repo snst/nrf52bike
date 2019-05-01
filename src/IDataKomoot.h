@@ -5,7 +5,7 @@
 
 #define MAX_KOMOOT_STREET_LEN (32u)
 
-class IKomootGUI
+class IDataKomoot
 {
 public:
   virtual void UpdateKomootDirection(uint8_t dir) = 0;
