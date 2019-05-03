@@ -36,7 +36,7 @@ class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCal
         return makeFunctionPointer(this, member);
     }
 
-    BleManagerBase(BLE &ble_interface, UIMain *gui);
+    BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue, UIMain *gui);
     virtual ~BleManagerBase();
     virtual void OnAppReady(BleAppBase *app);
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
@@ -60,7 +60,7 @@ class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCal
     UIMain *Gui();
 
   protected:
-    events::EventQueue event_queue_;
+    events::EventQueue & event_queue_;
     BLE &ble_;
     Timer timer_;
     UIMain *gui_;

@@ -2,7 +2,8 @@
 #include "UIMain.h"
 
 
-BleManagerBase::BleManagerBase(BLE &ble_interface, UIMain *gui) : ble_(ble_interface), gui_(gui), scanning_active_(false)
+BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue, UIMain *gui) 
+: ble_(ble_interface), event_queue_(event_queue), gui_(gui), scanning_active_(false)
 {
 }
 
@@ -173,8 +174,6 @@ void BleManagerBase::Start()
     ble_.gattClient().onHVX(as_cb(&Self::OnHVX));
     ble_.gattClient().onDataRead(as_cb(&Self::OnDataRead));
     ble_.gattClient().onServiceDiscoveryTermination(as_cb(&Self::OnServiceDiscoveryFinished));
-
-    event_queue_.dispatch_forever();
 }
 
 bool BleManagerBase::IsSameId128(const uint8_t *a, const uint8_t *b)

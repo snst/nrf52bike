@@ -15,8 +15,11 @@ int main(void)
 {
     INFO("+main()\r\n");
     BLE &ble = BLE::Instance();
-    UIMain ui;
-    BikeComputer mgr(ble, &ui);
+    events::EventQueue event_queue;
+    UIMain ui(event_queue);
+    BikeComputer mgr(ble, event_queue, &ui);
     mgr.Start();
+    event_queue.dispatch_forever();
+
     return 0;
 }

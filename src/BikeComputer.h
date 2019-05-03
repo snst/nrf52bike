@@ -11,7 +11,7 @@ public:
   BleAppCsc csc_app;
   BleAppKomoot komoot_app;
 
-  BikeComputer(BLE &ble_interface, UIMain *ui);
+  BikeComputer(BLE &ble_interface, events::EventQueue& event_queue, UIMain *ui);
   virtual ~BikeComputer();
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
   virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);

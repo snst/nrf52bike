@@ -15,8 +15,10 @@ IUILog* uilog = NULL;
 #define Y_CSC_TRAVEL_DISTANCE (Y_CSC_CADENCE + 26u)
 #define Y_CSC_TRAVEL_TIME (Y_CSC_TRAVEL_DISTANCE + 26u)
 
-UIMain::UIMain()
-    : csc_bat_(0xFF), gui_mode_(eStartup)
+UIMain::UIMain(events::EventQueue& event_queue)
+    : event_queue_(event_queue), csc_bat_(0xFF)
+    , gui_mode_(eStartup)
+    , komoot_view_(0)
 {
     tft_.initR(INITR_MINI160x80);
     tft_.fillScreen(ST77XX_BLACK);
@@ -26,6 +28,7 @@ UIMain::UIMain()
     tft_.setFont(NULL);
     display_led = 0; // enable display led
     uilog = this;
+    event_queue_.call_every(2000, mbed::callback(this, &UIMain::SwitchUI));
 }
 
 void UIMain::Update(const ISinkCsc::CscData_t &data)
@@ -88,6 +91,10 @@ void UIMain::Update(const ISinkCsc::CscData_t &data)
 void UIMain::Update(const ISinkKomoot::KomootData_t &data)
 {
     FLOW("UIMain::Update(Komoot)\r\n");
+    if(&komoot_data_ != &data) {
+        memcpy(&komoot_data_, &data, sizeof(data));
+    }
+
     SetOperational();
     switch (gui_mode_)
     {
@@ -103,15 +110,17 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data)
                 tft_.drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
             }
         }
-        if (data.distance_m_updated)
+        //if (data.distance_m_updated)
+        if (komoot_view_ == 0)
         {
             char str[10] = {0};
             uint8_t len = sprintf(str, "%i", data.distance_m);
-            tft_.setFont(&Open_Sans_Condensed_Bold_31);
+            tft_.setFont(&Open_Sans_Condensed_Bold_49);
             tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-            tft_.WriteStringLen(30, 130, 50, str, len);
+            tft_.WriteStringLen(0, 80, 50, str, len);
         }
-        if (data.street_updated)
+        //if (data.street_updated)
+        if (komoot_view_ == 1)
         {
             tft_.setFont(&Open_Sans_Condensed_Bold_31);
             tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -200,4 +209,11 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
     tft_.setTextColor(color);
     tft_.setFont(&Open_Sans_Condensed_Bold_31);
     tft_.WriteStringLen(0, y, 80, str, len);
+}
+
+void UIMain::SwitchUI()
+{
+    komoot_view_ = komoot_view_ ? 0 : 1;
+    INFO("SwitchUI(%u)\r\n", komoot_view_);
+    Update(komoot_data_);
 }
