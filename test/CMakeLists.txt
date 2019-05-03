@@ -10,6 +10,7 @@ add_executable(biketest test_main.cpp
     ../src/Adafruit_ST7735.cpp 
     ../src/GFX.cpp
     ../src/AppCsc.cpp
+    ../src/common.cpp
     )
 target_link_libraries(biketest ${GTEST_LIBRARIES} pthread)
 include_directories(. ../font ../src)

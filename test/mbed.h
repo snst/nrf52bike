@@ -40,5 +40,6 @@ static void wait_ms(uint32_t ms) {}
 #define TFT_DC 5
 #define TFT_RST 6
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #endif

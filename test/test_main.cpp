@@ -5,14 +5,29 @@
 #include "../font/Open_Sans_Condensed_Bold_49.h"
 #include "ISinkCsc.h"
 #include "AppCsc.h"
+#include "IUILog.h"
+#include "common.h"
 
-TEST(font, font1)
+IUILog* uilog;
+
+TEST(font, font_h2)
 {
     TftEmu tft;
     tft.initR(INITR_MINI160x80);
     tft.setFont(&Open_Sans_Condensed_Bold_31);
     tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft.write_chars(0, 0, 80, "h2", 2);
+    tft.WriteStringLen(0, 0, 80, "h2", 2);
+}
+
+TEST(font, font_444_444)
+{
+    TftEmu tft;
+    tft.initR(INITR_MINI160x80);
+    tft.setFont(&Open_Sans_Condensed_Bold_31);
+    tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft.WriteStringLen(0, 0, 40, "158", 3, 0, true);
+    tft.WriteStringLen(0, 0, 80, "133", 3, 0, true);
+    tft.WriteStringLen(0, 0, 80, "eea", 4, 0, false);
 }
 
 int main(int argc, char **argv)
@@ -48,36 +63,75 @@ TEST(CSC, AverageSpeed)
 {
     CscTestData d;
     AppCsc csc(&d);
-    csc.csc_data_.trip_distance_cm = 23*1000*100;
-    csc.csc_data_.trip_time_ms = 30 * 60 * 1000;
+    csc.data_.trip_distance_cm = 23*1000*100;
+    csc.data_.trip_time_ms = 30 * 60 * 1000;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(460, csc.csc_data_.average_speed_kmhX10);
+    EXPECT_EQ(460, csc.data_.average_speed_kmhX10);
 }
 
 TEST(CSC, FilteredSpeed)
 {
     CscTestData d;
     AppCsc csc(&d);
-    EXPECT_EQ(0, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ(0, csc.data_.filtered_speed_kmhX10);
 
-    csc.csc_data_.speed_kmhX10 = 0;
+    csc.data_.speed_kmhX10 = 0;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(0, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ(0, csc.data_.filtered_speed_kmhX10);
 
-    csc.csc_data_.speed_kmhX10 = 100;
+    csc.data_.speed_kmhX10 = 100;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(100 / SPEED_FILTER_VALUES_CNT, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ(100 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
-    csc.csc_data_.speed_kmhX10 = 50;
+    csc.data_.speed_kmhX10 = 50;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(150 / SPEED_FILTER_VALUES_CNT, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ(150 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
-    csc.csc_data_.speed_kmhX10 = 200;
+    csc.data_.speed_kmhX10 = 200;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(350 / SPEED_FILTER_VALUES_CNT, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ(350 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
-    csc.csc_data_.speed_kmhX10 = 80;
+    csc.data_.speed_kmhX10 = 80;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ((50+200+80) / SPEED_FILTER_VALUES_CNT, csc.csc_data_.filtered_speed_kmhX10);
+    EXPECT_EQ((50+200+80) / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 }
 
+TEST(common, utf_0x01)
+{
+    uint8_t in[] = { 'a', 0x01, 'b', 'c', 0 };
+    char out[100];
+    uint16_t out_len = sizeof(out);
+    ConvertUtf8toAscii(in, strlen((char*)in), out, out_len);
+    EXPECT_EQ(0, memcmp("a?bc", out, 4));
+//    printf("%s", out);
+}
+
+TEST(common, utf2_ss)
+{
+    uint8_t in[] = { 'a', 0xc3, 0x9f, 'b', 'c', 0 };
+    char out[100];
+    uint16_t out_len = sizeof(out);
+    ConvertUtf8toAscii(in, strlen((char*)in), out, out_len);
+    EXPECT_EQ(0, memcmp("assbc", out, 5));
+//    printf("%s", out);
+}
+
+TEST(common, utf2_ae)
+{
+    uint8_t in[] = { 'a', 0xc3, 0xa4, 'b', 'c', 0 };
+    char out[100];
+    uint16_t out_len = sizeof(out);
+    ConvertUtf8toAscii(in, strlen((char*)in), out, out_len);
+    EXPECT_EQ(0, memcmp("aaebc", out, 5));
+//    printf("%s", out);
+}
+
+TEST(common, utf2_ox)
+{
+    uint8_t in[] = { 'a', 0xc3, 0x01, 'b', 'c', 0 };
+    char out[100];
+    uint16_t out_len = sizeof(out);
+    ConvertUtf8toAscii(in, strlen((char*)in), out, out_len);
+    EXPECT_EQ(0, memcmp("a?bc", out, 4));
+//    printf("%s", out);
+}

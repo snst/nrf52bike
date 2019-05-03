@@ -12,12 +12,6 @@ BleAppKomoot::~BleAppKomoot()
 {
 }
 
-void BleAppKomoot::OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
-{
-    BleAppBase::OnCharacteristicDescriptorsFinished(params);
-    RequestNotify(true);
-}
-
 void BleAppKomoot::UpdateGUI()
 {
     sink_->Update(data_);
@@ -39,7 +33,7 @@ bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
         data_.distance_m_updated = data_.distance_m != distance_m;
         data_.distance_m = distance_m;
 
-        data_.street_updated = memcmp(data_.street, &data[9], len - 9);
+        data_.street_updated = (0 != memcmp(data_.street, &data[9], len - 9));
         if (data_.street_updated)
         {
             memcpy(data_.street, &data[9], len - 9);

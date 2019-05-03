@@ -878,7 +878,7 @@ size_t GFX::write(uint8_t c) {
     return 1;
 }
 
-uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t font_height)
+uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t font_height, uint16_t* start, uint16_t* end)
 {
 	uint16_t *ptr_in = ptr;
  	uint8_t  *bitmap = (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
@@ -897,7 +897,7 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t fo
         
 	y -= skip_y;
 
-	for (uint8_t sy = 0; sy < y+1; sy++) {
+	for (uint8_t sy = 0; (sy <= y); sy++) {
 
 		for (xx = 0; xx < w; xx++) {
 			if (!(bit++ & 7)) {
@@ -905,50 +905,67 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t fo
 			}
 
 			if (sy == y) {
-				if (bits & 0x80) {
-					*ptr = (uint16_t)((textcolor >> 8) | (textcolor << 8));
-				}
-				ptr++;
+                if((ptr < end)) {
+                    if (bits & 0x80) {
+                        if(ptr>=start)
+                        *ptr = (uint16_t)((textcolor >> 8) | (textcolor << 8));
+                    }
+                    ptr++;
+                }
 			}
 
 			bits <<= 1;
 		}
 	}
+
+
 	return ptr - ptr_in;
 }
 
-uint16_t GFX::get_chars_len(const char* chars, uint16_t len)
+GFXglyph* GFX::GetGlyph(unsigned char ch)
+{
+    GFXglyph* glyph = NULL;
+    //INFO("ch: %c, %u, 0x%x\r\n", ch, ch, ch);
+    if ((ch < ' ') || (ch > '}'))
+    {
+        ch = '?';
+    }
+    glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[ch - ' ']);
+
+    return glyph;
+}
+
+uint16_t GFX::GetStringLen(const char* chars, uint16_t len)
 {
     uint16_t width = 0;
-	uint8_t first = pgm_read_byte(&gfxFont->first);
-    for (uint16_t i = 0; i < len; i++) {
-        GFXglyph *glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[chars[i] - first]);
-        uint8_t w = pgm_read_byte(&glyph->width);
-        uint8_t xo = pgm_read_byte(&glyph->xOffset);
-        if (xo > 0 || i != 0) {
-            width += xo;
+    for (uint16_t i = 0; i < len; i++) 
+    {
+        unsigned char ch = chars[i];
+        GFXglyph *glyph = GetGlyph(ch);
+        if(NULL != glyph) 
+        {
+            uint8_t w = pgm_read_byte(&glyph->width);
+            uint8_t xo = pgm_read_byte(&glyph->xOffset);
+            if (xo > 0 || i != 0) 
+            {
+                width += xo;
+            }
+            width += w;
         }
-        width += w;
     }
     return width;
 }
 
-GFXglyph * GFX::GetGlyph(char ch)
-{
-	uint8_t first = pgm_read_byte(&gfxFont->first);
-    GFXglyph *glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[ch - first]);
-    return glyph;
-}
 
-void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, bool align_right)
+void GFX::WriteStringLen(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, bool align_right)
 {
-    uint16_t char_width = get_chars_len(chars, len);
-    uint16_t skip_x = align_right ? (ow - border - char_width) : border;
-	uint8_t first = pgm_read_byte(&gfxFont->first);
+    uint16_t char_width = GetStringLen(chars, len);
+    int16_t skip_x = align_right ? (ow - border - char_width) : border;
 	uint16_t* buffer = (uint16_t*) malloc(ow * 2);
 	uint16_t* ptr = buffer;
+    uint16_t* end = buffer + ow;
 
-	GFXglyph *glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))['3' - first]);
+	GFXglyph *glyph = GetGlyph('A');
 	uint8_t h = pgm_read_byte(&glyph->height);
 
 	if (buffer) {
@@ -957,12 +974,14 @@ void GFX::write_chars(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, 
 			ptr = buffer + skip_x;
 
 			for (uint16_t i = 0; i < len; i++) {
-				glyph = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[chars[i] - first]);
-				int8_t xo = pgm_read_byte(&glyph->xOffset);
-				if (xo > 0 || i != 0) {
-					ptr += xo;
-				}
-				ptr += drawCharLine(ptr, glyph, y, h);
+				glyph = GetGlyph(chars[i]);
+                if(NULL != glyph) {
+                    int8_t xo = pgm_read_byte(&glyph->xOffset);
+                    if (xo > 0 || i != 0) {
+                        ptr += xo;
+                    }
+                    ptr += drawCharLine(ptr, glyph, y, h, buffer, end);
+                }
 			}
             
 			drawBuffer(ox, oy + y, (uint8_t*)buffer, ow);
@@ -982,14 +1001,14 @@ void GFX::WriteString(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char
     {
         uint16_t n;
         for (n=0; n<len; n++) {
-            uint16_t l = get_chars_len(&str[start], n);
+            uint16_t l = GetStringLen(&str[start], n);
             INFO("st: start=%d, n=%d, l=%d\r\n", start, n, l);
             if (l > w) {
                 n--;
                 break;
             }
         }
-        write_chars(x, y+yy, w, &str[start], n, 0, false);
+        WriteStringLen(x, y+yy, w, &str[start], n, 0, false);
         start += n;
         len -= n;
         yy += (height + linespace);

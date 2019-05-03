@@ -1,6 +1,7 @@
 #include "BleManagerBase.h"
 #include "UIMain.h"
 
+
 BleManagerBase::BleManagerBase(BLE &ble_interface, UIMain *gui) : ble_(ble_interface), gui_(gui), scanning_active_(false)
 {
 }

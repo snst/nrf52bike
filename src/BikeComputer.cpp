@@ -5,8 +5,8 @@
 #define GAT_SERVICE_BAT (0x180Fu)
 const uint8_t GAT_SERVICE_KOMOOT[] = {0x71, 0xC1, 0xE1, 0x28, 0xD9, 0x2F, 0x4F, 0xA8, 0xA2, 0xB2, 0x0F, 0x17, 0x1D, 0xB3, 0x43, 0x6C};
 
-BikeComputer::BikeComputer(BLE &ble_interface, UIMain *gui)
-    : BleManagerBase(ble_interface, gui), csc_app(event_queue_, timer_, ble_interface, gui), komoot_app(event_queue_, timer_, ble_interface, gui)
+BikeComputer::BikeComputer(BLE &ble_interface, UIMain *ui)
+    : BleManagerBase(ble_interface, ui), csc_app(event_queue_, timer_, ble_interface, ui), komoot_app(event_queue_, timer_, ble_interface, ui)
 {
     csc_app.SetAppCallback(this);
     komoot_app.SetAppCallback(this);
@@ -162,11 +162,16 @@ void BikeComputer::ConnectDevices()
 void BikeComputer::OnScanStopped()
 {
     INFO("~BikeComputer::OnScanStopped()\r\n");
-    Gui()->Operational();
+    //Gui()->Operational();
     event_queue_.call_every(1000, mbed::callback(this, &BikeComputer::ConnectDevices));
 }
 
 void BikeComputer::OnAppReady(BleAppBase *app)
 {
     INFO("~BikeComputer::OnAppReady() app=%p\r\n", app);
+    /*
+    if (NULL != uilog) {
+        uilog = NULL;
+        //Gui()->Operational();
+    }*/
 }

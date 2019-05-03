@@ -20,8 +20,6 @@
 
 #include "tracer.h"
 
-class UIMain;
-
 #define MAX_NAME (7u)
 
 class BleAppBase : private mbed::NonCopyable<BleAppBase>

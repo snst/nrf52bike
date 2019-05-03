@@ -1,5 +1,7 @@
 #ifndef TRACER_H
-#define TRAVER_H
+#define TRACER_H
+
+#include "IUILog.h"
 
 //#define ENABLE_DEBUG_PRINT
 //#define ENABLE_FLOW_PRINT
@@ -31,5 +33,14 @@
 #else
 #define INFO(...)
 #endif
+
+extern IUILog* uilog;
+
+static void UILog(const char* str)
+{
+    if (NULL != uilog) {
+        uilog->Log(str);
+    }
+}
 
 #endif

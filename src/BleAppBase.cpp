@@ -1,4 +1,5 @@
 #include "BleAppBase.h"
+#include "tracer.h"
 
 #define DISCONNECTED_HANDLE (0xFFFFu)
 
@@ -12,6 +13,7 @@ BleAppBase::BleAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_i
                                                                                                         found_device_(false),
                                                                                                         app_callback_(NULL),
                                                                                                         connection_handle_(DISCONNECTED_HANDLE)
+                                                                                                        
 {
   strcpy(name_, name);
 }
@@ -36,6 +38,8 @@ bool BleAppBase::Connect()
   {
     ble_error_t err = ble_.gap().connect(device_addr_, device_addr_type_, NULL, NULL);
     INFO("~BleAppBase::Connect() => %s, err=0x%x\r\n", name_, err);
+    UILog("Connect ");
+    UILog(name_);
     return true;
   }
   return false;
@@ -45,6 +49,7 @@ void BleAppBase::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
   connection_handle_ = params->handle;
   INFO("~BleAppBase::OnConnected() => %s, handle=0x%x\r\n", name_, connection_handle_);
+  UILog(".ok.");
   if (!FoundCharacteristic())
   {
     StartServiceDiscovery();
@@ -82,6 +87,7 @@ void BleAppBase::OnServiceCharacteristicFound(const DiscoveredCharacteristic *pa
     INFO("~BleAppBase:: => %s -> characteristic 0x%x\r\n", name_, characteristic_id);
     characteristic_ = *param;
     found_characteristic = true;
+    UILog("char.");
   }
 }
 
@@ -99,7 +105,7 @@ void BleAppBase::OnServiceDiscoveryFinished(Gap::Handle_t handle)
   }
   else
   {
-    OnCharacteristicDescriptorsFinished(NULL);
+    OnAppReady();
   }
 }
 
@@ -128,6 +134,8 @@ void BleAppBase::OnCharacteristicDescriptorsFound(const CharacteristicDescriptor
 void BleAppBase::OnAppReady()
 {
   INFO("~BleAppBase::OnAppReady() => %s\r\n", name_);
+  RequestNotify(true);
+
   if (NULL != app_callback_)
   {
     app_callback_->OnAppReady(this);
@@ -137,6 +145,7 @@ void BleAppBase::OnAppReady()
 void BleAppBase::OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
   INFO("~BleAppBase::OnCharacteristicDescriptorsFinished() => %s\r\n", name_);
+  UILog("desc.");
   OnAppReady();
 }
 

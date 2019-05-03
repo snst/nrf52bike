@@ -9,9 +9,8 @@ class ISinkCsc;
 class BleAppCsc : public BleAppBase
 {
   public:
-    BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkCsc* csc_data_);
+    BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkCsc* sink);
     virtual ~BleAppCsc();
-    virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params);
     void OnHVX(const GattHVXCallbackParams *params);
   protected:
     AppCsc csc_;

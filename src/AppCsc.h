@@ -31,6 +31,8 @@ class AppCsc
     ISinkCsc* sink_;
     ISinkCsc::CscData_t data_;
     double wheel_size_cm_;
+    uint32_t crank_counter_sum_;
+    uint32_t crank_event_sum_;
     uint16_t filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX];
     bool is_init_;
 };

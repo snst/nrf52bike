@@ -15,8 +15,8 @@ int main(void)
 {
     INFO("+main()\r\n");
     BLE &ble = BLE::Instance();
-    UIMain gui;
-    BikeComputer mgr(ble, &gui);
+    UIMain ui;
+    BikeComputer mgr(ble, &ui);
     mgr.Start();
     return 0;
 }
