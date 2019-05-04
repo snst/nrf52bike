@@ -6,9 +6,8 @@
 #include "ISinkCsc.h"
 #include "AppCsc.h"
 #include "IUILog.h"
+#include "UIMain.h"
 #include "common.h"
-
-IUILog* uilog;
 
 TEST(font, font_h2)
 {
@@ -134,4 +133,14 @@ TEST(common, utf2_ox)
     ConvertUtf8toAscii(in, strlen((char*)in), out, out_len);
     EXPECT_EQ(0, memcmp("a?bc", out, 4));
 //    printf("%s", out);
+}
+
+TEST(UIMain, kommot_dist_1)
+{
+    TftEmu tft;
+    tft.initR(INITR_MINI160x80);
+    events::EventQueue eq;
+
+    UIMain ui(tft, eq);
+    ui.DrawKomootDistance(1);
 }

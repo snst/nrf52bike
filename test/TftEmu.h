@@ -14,10 +14,11 @@ void drawBuffer(int16_t x, int16_t y, uint8_t* buf, int16_t w)
     uint16_t* p = (uint16_t*) buf;
     while(w--)
     {
-        printf("%c", *p++ ? '#' : '.');
+        ::printf("%c", *p++ ? '#' : '.');
     }
-    printf("\n");
+    ::printf("\n");
 }
+
 
 };
 

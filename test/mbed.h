@@ -22,6 +22,8 @@ class SPI {
 
 class Stream {
     public:
+    void printf(const char* fmt, const char* val) {}
+
 };
 
 class Timer
@@ -41,5 +43,19 @@ static void wait_ms(uint32_t ms) {}
 #define TFT_RST 6
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+#define callback(x, y) stub_callback()
+
+
+namespace mbed
+{
+    static void* stub_callback() {return NULL; }
+    /*
+    class stub_callback
+    {
+        public:
+        stub_callback() {}
+    };*/
+}
 
 #endif

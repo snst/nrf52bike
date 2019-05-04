@@ -103,7 +103,7 @@ public:
   void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
   void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
-  void drawBuffer(int16_t x, int16_t y, uint8_t* buf, int16_t w);
+  virtual void drawBuffer(int16_t x, int16_t y, uint8_t* buf, int16_t w);
 
   static uint16_t Color565(uint8_t r, uint8_t g, uint8_t b);
 

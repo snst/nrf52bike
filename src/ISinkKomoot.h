@@ -17,7 +17,7 @@ public:
     bool street_updated;
   } KomootData_t;
 
-  virtual void Update(const KomootData_t& data) = 0;
+  virtual void Update(const KomootData_t& data, bool force) = 0;
 };
 
 #endif

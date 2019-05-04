@@ -19,16 +19,15 @@ public:
     eKomoot,
     eHybrid
   };
-  UIMain(events::EventQueue& event_queue);
+  UIMain(Adafruit_ST7735& tft, events::EventQueue& event_queue);
   virtual void Update(const ISinkCsc::CscData_t &data);
-  virtual void Update(const ISinkKomoot::KomootData_t &data);
+  virtual void Update(const ISinkKomoot::KomootData_t &data, bool force = false);
   virtual void Log(const char *str);
   void SetOperational();
   void SetGuiMode(eGuiMode_t mode);
 
-protected:
-  Adafruit_ST7735 tft_ = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
-  //PinName mosi, PinName miso, PinName sck, PinName CS, PinName RS, PinName RST
+//protected:
+  Adafruit_ST7735 tft_;
   events::EventQueue& event_queue_;
 
   uint8_t csc_bat_;
@@ -38,6 +37,7 @@ protected:
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
   void DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color = 0xFFFF);
   void DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color = 0xFFFF);
+  void DrawKomootDistance(uint16_t distance_m);
   void SetCadenceColor(uint16_t cadence);
   void SwitchUI();
   ISinkKomoot::KomootData_t komoot_data_;

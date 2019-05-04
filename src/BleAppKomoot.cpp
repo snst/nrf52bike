@@ -14,7 +14,7 @@ BleAppKomoot::~BleAppKomoot()
 
 void BleAppKomoot::UpdateGUI()
 {
-    sink_->Update(data_);
+    sink_->Update(data_, false);
 }
 
 bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
