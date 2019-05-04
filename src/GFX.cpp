@@ -1002,7 +1002,7 @@ void GFX::WriteString(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char
         uint16_t n;
         for (n=0; n<len; n++) {
             uint16_t l = GetStringLen(&str[start], n);
-            INFO("st: start=%d, n=%d, l=%d\r\n", start, n, l);
+            //INFO("st: start=%d, n=%d, l=%d\r\n", start, n, l);
             if (l > w) {
                 n--;
                 break;

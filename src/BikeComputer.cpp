@@ -97,7 +97,7 @@ void BikeComputer::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbac
         INFO("FOUND CSC\r\n");
         if(!csc_app.HaveFoundDevice())
         {
-            Gui()->Log("CSC\n");
+            UILog("CSC\n");
         }
         csc_app.SetDeviceAddress(params);
         CheckScanStop();
@@ -112,7 +112,7 @@ void BikeComputer::OnFoundService128(const uint8_t *id, const Gap::Advertisement
         INFO("FOUND Komoot\r\n");
         if(!komoot_app.HaveFoundDevice())
         {
-            Gui()->Log("Komoot\n");
+            UILog("Komoot\n");
         }
         komoot_app.SetDeviceAddress(params);
         CheckScanStop();
@@ -131,7 +131,7 @@ void BikeComputer::CheckScanStop()
     {
         Gui()->SetGuiMode(UIMain::eHybrid);
         StopScan();
-        Gui()->Log("Stop scanning\n");
+        UILog("Stop scanning\n");
     }
     else if (isTimeout && (csc_app.HaveFoundDevice() || komoot_app.HaveFoundDevice()))
     {
@@ -142,7 +142,7 @@ void BikeComputer::CheckScanStop()
         } else {
             Gui()->SetGuiMode(UIMain::eStartup);
         }
-        Gui()->Log("Scan timeout\n");
+        UILog("Scan timeout\n");
         StopScan();
     }
 }

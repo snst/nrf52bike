@@ -140,7 +140,7 @@ void BleManagerBase::OnScanStopped()
 void BleManagerBase::OnInitDone()
 {
     INFO("~BleManagerBase::OnInitDone()\r\n");
-    Gui()->Log("Scanning\n");
+    UILog("Scanning\n");
     StartScan();
 }
 
@@ -163,7 +163,7 @@ void BleManagerBase::OnServiceDiscoveryFinished(Gap::Handle_t handle)
 void BleManagerBase::Start()
 {
     INFO("~BleManagerBase::Start()\r\n");
-    Gui()->Log("Startup\n");
+    UILog("Startup\n");
     ble_.onEventsToProcess(makeFunctionPointer(this, &Self::ScheduleBleEvents));
     timer_.start();
 

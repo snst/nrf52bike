@@ -113,6 +113,8 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data)
         //if (data.distance_m_updated)
         if (komoot_view_ == 0)
         {
+            tft_.fillRect(0, 80, 80, 50, 0);
+
             char str[10] = {0};
             uint8_t len = sprintf(str, "%i", data.distance_m);
             tft_.setFont(&Open_Sans_Condensed_Bold_49);
@@ -122,6 +124,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data)
         //if (data.street_updated)
         if (komoot_view_ == 1)
         {
+            tft_.fillRect(0, 80, 80, 50, 0);
             tft_.setFont(&Open_Sans_Condensed_Bold_31);
             tft_.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
             char street[20];
@@ -140,7 +143,9 @@ void UIMain::Log(const char *str)
 
 void UIMain::SetOperational()
 {
+    INFO("SetOperational()1\r\n");
     if(NULL != uilog) {
+        INFO("SetOperational()2\r\n");
         uilog = NULL;
         tft_.fillScreen(ST77XX_BLACK);
     }
