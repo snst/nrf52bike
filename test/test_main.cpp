@@ -141,6 +141,9 @@ TEST(UIMain, kommot_dist_1)
     tft.initR(INITR_MINI160x80);
     events::EventQueue eq;
 
-    UIMain ui(tft, eq);
+    UIMain ui(&tft, eq);
     ui.DrawKomootDistance(1);
+    ui.DrawKomootDistance(999);
+    ui.DrawKomootDistance(2222);
+    ui.DrawKomootDistance(33333);
 }

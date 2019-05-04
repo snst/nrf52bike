@@ -17,8 +17,9 @@ int main(void)
     BLE &ble = BLE::Instance();
     events::EventQueue event_queue;
     Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
+    tft.initR(INITR_MINI160x80);
 
-    UIMain ui(tft, event_queue);
+    UIMain ui(&tft, event_queue);
     
     BikeComputer mgr(ble, event_queue, &ui);
     

@@ -19,7 +19,7 @@ public:
     eKomoot,
     eHybrid
   };
-  UIMain(Adafruit_ST7735& tft, events::EventQueue& event_queue);
+  UIMain(GFX* tft, events::EventQueue& event_queue);
   virtual void Update(const ISinkCsc::CscData_t &data);
   virtual void Update(const ISinkKomoot::KomootData_t &data, bool force = false);
   virtual void Log(const char *str);
@@ -27,7 +27,7 @@ public:
   void SetGuiMode(eGuiMode_t mode);
 
 //protected:
-  Adafruit_ST7735 tft_;
+  GFX* tft_;
   events::EventQueue& event_queue_;
 
   uint8_t csc_bat_;
