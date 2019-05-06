@@ -1,7 +1,7 @@
 #include "BleAppKomoot.h"
 
-BleAppKomoot::BleAppKomoot(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkKomoot *sink)
-    : BleAppBase(event_queue, timer, ble_interface, "Komoot"), sink_(sink)
+BleAppKomoot::BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, ISinkKomoot *sink)
+    : BleAppBase(event_queue, ble_interface, "Komoot"), sink_(sink)
 {
     FindCharacteristic(0xd605);
     memset(&data_, 0xFF, sizeof(data_));
@@ -39,7 +39,13 @@ bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
             memcpy(data_.street, &data[9], len - 9);
             data_.street[len - 9] = '\0';
         }
-
+/*
+        static uint16_t dist = 550;
+        dist-=10;
+        data_.distance_m = dist;
+        data_.distance_m_updated = true;
+        data_.direction_updated = true;
+*/
         INFO("komoot: dir=%u, dist=%u, len=%u, street=%s\r\n", data_.direction, data_.distance_m, len - 9, data_.street);
         ret = true;
     }

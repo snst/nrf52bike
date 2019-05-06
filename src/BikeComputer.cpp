@@ -6,7 +6,7 @@
 const uint8_t GAT_SERVICE_KOMOOT[] = {0x71, 0xC1, 0xE1, 0x28, 0xD9, 0x2F, 0x4F, 0xA8, 0xA2, 0xB2, 0x0F, 0x17, 0x1D, 0xB3, 0x43, 0x6C};
 
 BikeComputer::BikeComputer(BLE &ble_interface, events::EventQueue& event_queue, UIMain *ui)
-    : BleManagerBase(ble_interface, event_queue, ui), csc_app(event_queue_, timer_, ble_interface, ui), komoot_app(event_queue_, timer_, ble_interface, ui)
+    : BleManagerBase(ble_interface, event_queue, ui), csc_app(event_queue_, ble_interface, ui), komoot_app(event_queue_, ble_interface, ui)
 {
     csc_app.SetAppCallback(this);
     komoot_app.SetAppCallback(this);

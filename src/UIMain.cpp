@@ -7,7 +7,7 @@
 #include "common.h"
 
 DigitalOut display_led((PinName)11);
-IUILog* uilog = NULL;
+IUILog *uilog = NULL;
 
 #define Y_CSC_SPEED 0u
 #define Y_CSC_AVERAGE_SPEED (Y_CSC_SPEED + 40u)
@@ -15,10 +15,8 @@ IUILog* uilog = NULL;
 #define Y_CSC_TRAVEL_DISTANCE (Y_CSC_CADENCE + 26u)
 #define Y_CSC_TRAVEL_TIME (Y_CSC_TRAVEL_DISTANCE + 26u)
 
-UIMain::UIMain(GFX* tft, events::EventQueue& event_queue)
-    : tft_(tft), event_queue_(event_queue), csc_bat_(0xFF)
-    , gui_mode_(eStartup)
-    , komoot_view_(0)
+UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
+    : tft_(tft), event_queue_(event_queue), csc_bat_(0xFF), gui_mode_(eStartup), komoot_view_(0), last_komoot_view_switch_ms_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -27,14 +25,13 @@ UIMain::UIMain(GFX* tft, events::EventQueue& event_queue)
     tft_->setFont(NULL);
     display_led = 0; // enable display led
     uilog = this;
-    event_queue_.call_every(2000, mbed::callback(this, &UIMain::SwitchUI));
 }
 
 void UIMain::Update(const ISinkCsc::CscData_t &data)
 {
     FLOW("UIMain::Update(CSC)\r\n");
     SetOperational();
-    
+
     switch (gui_mode_)
     {
     case eCsc:
@@ -79,8 +76,7 @@ void UIMain::Update(const ISinkCsc::CscData_t &data)
             uint8_t len = sprintf(str, "%i", data.filtered_speed_kmhX10 / 10);
             tft_->setFont(&Open_Sans_Condensed_Bold_31);
             tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-            tft_->WriteStringLen(0, 130, 30, str, len,2,false);
-
+            tft_->WriteStringLen(0, 130, 30, str, len, 2, GFX::eLeft);
         }
     default:
         break;
@@ -90,9 +86,6 @@ void UIMain::Update(const ISinkCsc::CscData_t &data)
 void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 {
     FLOW("UIMain::Update(Komoot)\r\n");
-    if(&komoot_data_ != &data) {
-        memcpy(&komoot_data_, &data, sizeof(data));
-    }
 
     SetOperational();
     switch (gui_mode_)
@@ -101,48 +94,61 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         break;
     case eHybrid:
     case eKomoot:
-        if (data.direction_updated)
+        if (data.direction_updated || data.distance_m_updated)
         {
-            const uint8_t *ptr = GetNavIcon(data.direction);
-            if (ptr)
+            DrawKomootDirection(data);
+        }
+
+        if (data.street_updated) // new street => always show it
+        {
+            DrawKomootStreet(data);
+            last_komoot_view_switch_ms_ = GetMillis();
+            komoot_view_ = 0;
+        }
+        else if (GetMillis() - last_komoot_view_switch_ms_ > 2000u)
+        {
+            last_komoot_view_switch_ms_ = GetMillis();
+            komoot_view_ = (komoot_view_ + 1u) % 2u;
+            if (0u == komoot_view_)
             {
-                tft_->drawXBitmap2(0, 0, ptr, 80, 80, Adafruit_ST7735::Color565(255, 255, 255));
+                DrawKomootStreet(data);
+            }
+            else
+            {
+                DrawKomootDistance(data);
             }
         }
-        if ((komoot_view_ == 0) && ((komoot_data_.distance_m != data.distance_m) || force))
+        else if ((1 == komoot_view_) && data.distance_m_updated)
         {
-            komoot_data_.distance_m = data.distance_m;
-            DrawKomootDistance(data.distance_m);
+            DrawKomootDistance(data);
         }
-        if ((komoot_view_ == 1) && ((0 != memcmp(komoot_data_.street, data.street, sizeof(data.street))) || force))
+
+        if (data.distance_m_updated) 
         {
-            memcpy(komoot_data_.street, data.street, sizeof(data.street));
-            tft_->fillRect(0, 80, 80, 50, 0);
-            tft_->setFont(&Open_Sans_Condensed_Bold_31);
-            tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-            char street[20];
-            ConvertUtf8toAscii(data.street, strlen((char*)data.street), street, sizeof(street));
-            tft_->WriteString(0, 80, 80, 80, street);
+            DrawKomootDistanceBar(data);
         }
+
     default:
         break;
     }
 }
 
-void UIMain::DrawKomootDistance(uint16_t distance_m)
+void UIMain::DrawKomootDistance(const ISinkKomoot::KomootData_t &data)
 {
     tft_->fillRect(0, 80, 80, 50, 0);
     char str[10] = {0};
     uint8_t len;
-    if(distance_m <= 999) {
-        len = sprintf(str, "%i", distance_m);
+    if (data.distance_m <= 999)
+    {
+        len = sprintf(str, "%i", data.distance_m);
     }
-    else {
-        len = sprintf(str, "%i.%i", distance_m / 1000u, (distance_m % 1000u) / 100u);
+    else
+    {
+        len = sprintf(str, "%i.%i", data.distance_m / 1000u, (data.distance_m % 1000u) / 100u);
     }
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft_->WriteStringLen(0, 80, 80, str, len, 2, true);
+    tft_->WriteStringLen(0, 80, 80, str, len, 2, GFX::eCenter);
 }
 
 void UIMain::Log(const char *str)
@@ -153,8 +159,9 @@ void UIMain::Log(const char *str)
 void UIMain::SetOperational()
 {
     INFO("SetOperational()1\r\n");
-    if(NULL != uilog) {
-        INFO("SetOperational()2\r\n");
+    if (NULL != uilog)
+    {
+        INFO("Disable log\r\n");
         uilog = NULL;
         tft_->fillScreen(ST77XX_BLACK);
     }
@@ -171,7 +178,7 @@ void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
     uint16_t len = sprintf(str, ".%i", speed_kmhX10 % 10);
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
     tft_->setTextColor(color);
-    tft_->WriteStringLen(56, y + 12, 20, str, len, 0, false);
+    tft_->WriteStringLen(56, y + 12, 20, str, len, 0, GFX::eLeft);
 
     len = sprintf(str, "%i", speed_kmhX10 / 10);
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
@@ -191,7 +198,6 @@ void UIMain::SetCadenceColor(uint16_t cadence)
         tft_->setTextColor(Adafruit_ST7735::Color565(255, 0, 0));
     else
         tft_->setTextColor(Adafruit_ST7735::Color565(0, 255, 0));
-
 }
 
 void UIMain::DrawCadence(uint16_t x, uint16_t y, uint16_t cadence)
@@ -225,9 +231,57 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
     tft_->WriteStringLen(0, y, 80, str, len);
 }
 
-void UIMain::SwitchUI()
+void UIMain::DrawKomootStreet(const ISinkKomoot::KomootData_t &data)
 {
-    komoot_view_ = komoot_view_ ? 0 : 1;
-    INFO("SwitchUI(%u)\r\n", komoot_view_);
-    Update(komoot_data_, true);
+    tft_->fillRect(0, 80, 80, 50, 0);
+    tft_->setFont(&Open_Sans_Condensed_Bold_31);
+    tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    char street_ascii[20];
+    ConvertUtf8toAscii(data.street, strlen((char *)data.street), street_ascii, sizeof(street_ascii));
+    tft_->WriteString(0, 80, 80, 80, street_ascii);
+}
+
+uint16_t UIMain::GetKomootDistanceColor(uint16_t distance_m)
+{
+    uint16_t color = 0xFFFF;
+    if (distance_m <= 50u)
+    {
+        color = Adafruit_ST7735::Color565(255, 0, 0);
+    }
+    else if (distance_m <= 100u)
+    {
+        color = Adafruit_ST7735::Color565(255, 150, 50);
+    }
+    else if (distance_m <= 200u)
+    {
+        color = Adafruit_ST7735::Color565(0, 200, 0);
+    }
+    return color;
+}
+
+void UIMain::DrawKomootDirection(const ISinkKomoot::KomootData_t &data)
+{
+    const uint8_t *ptr = GetNavIcon(data.direction);
+    if (ptr)
+    {
+        tft_->drawXBitmap2(0, 0, ptr, 80, 80, GetKomootDistanceColor(data.distance_m));
+    }
+}
+
+void UIMain::DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data)
+{
+    uint16_t warn_distance = 500;
+    uint8_t w = 6;
+    uint16_t color = GetKomootDistanceColor(data.distance_m);
+    uint16_t h = 80;
+    if (data.distance_m < warn_distance) {
+        h = data.distance_m * 80 / warn_distance;
+    }
+    tft_->fillRect(0, 0, w, h, 0);
+//    tft_->fillRect(80-w, 0, w, h, 0);
+
+    if(h<80) {
+        tft_->fillRect(0, h, w, 80-h, color);
+    }
+//    tft_->fillRect(80-w, h, w, 80-h, color);
 }

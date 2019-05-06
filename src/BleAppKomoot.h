@@ -7,7 +7,7 @@
 class BleAppKomoot : public BleAppBase
 {
   public:
-    BleAppKomoot(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkKomoot* sink);
+    BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, ISinkKomoot* sink);
     virtual ~BleAppKomoot();
     void UpdateGUI();
     bool ProcessData(const uint8_t *data, uint32_t len);

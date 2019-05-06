@@ -816,7 +816,7 @@ void GFX::drawChar(int16_t x, int16_t y, unsigned char c,
                     bits = pgm_read_byte(&bitmap[bo++]);
                 }
                 
-                uint16_t col = (bits & 0x80) ? ((color>>8) | (color << 8)) : 0;
+                uint16_t col = (bits & 0x80) ? color : 0;
                 *p++ = col;
                 bits <<= 1;
             }
@@ -908,7 +908,8 @@ uint16_t GFX::drawCharLine(uint16_t *ptr, GFXglyph *glyph, uint8_t y, int16_t fo
                 if((ptr < end)) {
                     if (bits & 0x80) {
                         if(ptr>=start)
-                        *ptr = (uint16_t)((textcolor >> 8) | (textcolor << 8));
+//                        *ptr = (uint16_t)((textcolor >> 8) | (textcolor << 8));
+                        *ptr = textcolor;
                     }
                     ptr++;
                 }
@@ -957,10 +958,26 @@ uint16_t GFX::GetStringLen(const char* chars, uint16_t len)
 }
 
 
-void GFX::WriteStringLen(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, bool align_right)
+void GFX::WriteStringLen(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, eAlign_t align)
 {
     uint16_t char_width = GetStringLen(chars, len);
-    int16_t skip_x = align_right ? (ow - border - char_width) : border;
+    int16_t skip_x = 0;
+    switch(align)
+    {
+        case eCenter:
+        if (char_width < ow) {
+            skip_x = (ow - char_width) / 2u;
+        }
+        break;
+        case eLeft:
+            skip_x = border;
+        break;
+        case eRight:
+        default:
+            skip_x = (ow - border - char_width);
+        break;
+
+    }
 	uint16_t* buffer = (uint16_t*) malloc(ow * 2);
 	uint16_t* ptr = buffer;
     uint16_t* end = buffer + ow;
@@ -1008,7 +1025,7 @@ void GFX::WriteString(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char
                 break;
             }
         }
-        WriteStringLen(x, y+yy, w, &str[start], n, 0, false);
+        WriteStringLen(x, y+yy, w, &str[start], n, 0, GFX::eLeft);
         start += n;
         len -= n;
         yy += (height + linespace);

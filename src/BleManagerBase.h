@@ -62,7 +62,6 @@ class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCal
   protected:
     events::EventQueue & event_queue_;
     BLE &ble_;
-    Timer timer_;
     UIMain *gui_;
     bool scanning_active_;
     uint32_t start_scan_ms_;

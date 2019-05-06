@@ -37,11 +37,14 @@ public:
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
   void DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color = 0xFFFF);
   void DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color = 0xFFFF);
-  void DrawKomootDistance(uint16_t distance_m);
+  void DrawKomootDistance(const ISinkKomoot::KomootData_t &data);
+  void DrawKomootStreet(const ISinkKomoot::KomootData_t &data);
+  void DrawKomootDirection(const ISinkKomoot::KomootData_t &data);
   void SetCadenceColor(uint16_t cadence);
-  void SwitchUI();
-  ISinkKomoot::KomootData_t komoot_data_;
+  void DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data);
+  uint16_t GetKomootDistanceColor(uint16_t distance_m);
   uint8_t komoot_view_;
+  uint32_t last_komoot_view_switch_ms_;
 };
 
 #endif

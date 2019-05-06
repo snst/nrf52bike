@@ -3,8 +3,7 @@
 
 #define DISCONNECTED_HANDLE (0xFFFFu)
 
-BleAppBase::BleAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, char *name) : event_queue_(event_queue),
-                                                                                                        timer_(timer),
+BleAppBase::BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char *name) : event_queue_(event_queue),
                                                                                                         ble_(ble_interface),
                                                                                                         _post_init_cb(),
                                                                                                         desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),

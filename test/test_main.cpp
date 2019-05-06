@@ -24,9 +24,9 @@ TEST(font, font_444_444)
     tft.initR(INITR_MINI160x80);
     tft.setFont(&Open_Sans_Condensed_Bold_31);
     tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft.WriteStringLen(0, 0, 40, "158", 3, 0, true);
-    tft.WriteStringLen(0, 0, 80, "133", 3, 0, true);
-    tft.WriteStringLen(0, 0, 80, "eea", 4, 0, false);
+    tft.WriteStringLen(0, 0, 40, "158", 3, 0, eRight);
+    tft.WriteStringLen(0, 0, 80, "133", 3, 0, eRight);
+    tft.WriteStringLen(0, 0, 80, "eea", 4, 0, eLeft);
 }
 
 int main(int argc, char **argv)

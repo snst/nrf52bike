@@ -6,6 +6,7 @@
 #include "tracer.h"
 #include "BikeComputer.h"
 #include "UIMain.h"
+#include "common.h"
 
 // BLE_GAP_EVT_CONN_PARAM_UPDATE_REQUEST
 
@@ -16,6 +17,7 @@ int main(void)
     INFO("+main()\r\n");
     BLE &ble = BLE::Instance();
     events::EventQueue event_queue;
+    StartTimer();
     Adafruit_ST7735 tft = Adafruit_ST7735(TFT_MOSI, TFT_MISO, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST);
     tft.initR(INITR_MINI160x80);
 

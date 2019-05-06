@@ -1,5 +1,6 @@
 #include "BleManagerBase.h"
 #include "UIMain.h"
+#include "common.h"
 
 
 BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue, UIMain *gui) 
@@ -105,7 +106,7 @@ void BleManagerBase::StartScan(uint32_t timeout)
     INFO("~BleManagerBase::StartScan(), timeout=%u, active=%d\r\n", timeout, scanning_active_);
     if (!scanning_active_)
     {
-        start_scan_ms_ = timer_.read_ms();
+        start_scan_ms_ = GetMillis();
         scanning_active_ = true;
         ble_.gap().setScanParams(400, 400, 0, true);
         ble_.gap().startScan(this, &BleManagerBase::OnAdvertisement);
@@ -118,7 +119,7 @@ void BleManagerBase::StartScan(uint32_t timeout)
 
 uint32_t BleManagerBase::GetScanTimeMs()
 {
-    return timer_.read_ms() - start_scan_ms_;
+    return GetMillis() - start_scan_ms_;
 }
 
 void BleManagerBase::StopScan()
@@ -165,7 +166,6 @@ void BleManagerBase::Start()
     INFO("~BleManagerBase::Start()\r\n");
     UILog("Startup\n");
     ble_.onEventsToProcess(makeFunctionPointer(this, &Self::ScheduleBleEvents));
-    timer_.start();
 
     ble_error_t err = ble_.init(this, &BleManagerBase::OnInitialized);
 

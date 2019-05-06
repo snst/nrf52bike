@@ -27,7 +27,7 @@ class BleAppBase : private mbed::NonCopyable<BleAppBase>
   typedef BleAppBase Self;
 
 public:
-  BleAppBase(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, char* name);
+  BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char* name);
   virtual ~BleAppBase();
   bool HaveFoundDevice();
   const Gap::Handle_t &GetConnectionHandle();
@@ -77,7 +77,6 @@ protected:
   bool found_characteristic;
   bool found_desc2902_;
   bool found_device_;
-  Timer &timer_;
   IAppCallback* app_callback_;
   char name_[MAX_NAME+1];
 };

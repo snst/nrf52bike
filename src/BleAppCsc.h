@@ -9,7 +9,7 @@ class ISinkCsc;
 class BleAppCsc : public BleAppBase
 {
   public:
-    BleAppCsc(events::EventQueue &event_queue, Timer &timer, BLE &ble_interface, ISinkCsc* sink);
+    BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, ISinkCsc* sink);
     virtual ~BleAppCsc();
     void OnHVX(const GattHVXCallbackParams *params);
   protected:

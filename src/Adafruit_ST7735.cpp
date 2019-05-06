@@ -379,7 +379,7 @@ void Adafruit_ST7735::drawPixel(int16_t x, int16_t y, uint16_t color)
   _cs = 0;
 
   lcdPort.write(color >> 8);
-  lcdPort.write(color);
+  lcdPort.write(color & 0xFF);
 
   _cs = 1;
 }
@@ -492,7 +492,9 @@ void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
 uint16_t Adafruit_ST7735::Color565(uint8_t r, uint8_t g, uint8_t b)
 {
   //    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-  return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3);
+  // return ((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3);
+  uint16_t col = (((b>>3)&0x1F) << 11) | (((g>>2)&0x3F) << 5) | ((r >> 3)&0x1F);
+  return (col >> 8) | (col << 8);
 }
 
 #define MADCTL_MY 0x80
