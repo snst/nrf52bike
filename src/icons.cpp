@@ -30,7 +30,7 @@
 #include "../icons/ic_nav_roundabout_ccw1_2.xbm"
 #include "../icons/ic_nav_roundabout_cw2_2.xbm"
 
-const uint8_t *nav_icons[] = {
+const char *nav_icons[] = {
     NULL,
     ic_nav_arrow_keep_going_bits,      // 1
     ic_nav_arrow_start_bits,           // 2
@@ -66,5 +66,5 @@ const uint8_t *nav_icons[] = {
 
 const uint8_t *GetNavIcon(uint8_t i)
 {
-    return i <= 30 ? nav_icons[i] : NULL;
+    return i <= 30 ? ((uint8_t*)nav_icons[i]) : NULL;
 }

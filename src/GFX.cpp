@@ -281,6 +281,8 @@ void GFX::fillScreen(uint16_t color) {
     fillRect(0, 0, _width, _height, color);
 }
 
+
+
 /**************************************************************************/
 /*!
    @brief    Draw a line

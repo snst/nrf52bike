@@ -30,6 +30,7 @@ class Timer
 {
     public:
     uint32_t read_ms() { return 5; }
+    void start() {}
 };
 
 static void wait_ms(uint32_t ms) {}

@@ -6,6 +6,8 @@ set(CMAKE_BUILD_TYPE "Debug")
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR})
 
+set(CMAKE_CXX_FLAGS "-Wno-narrowing")
+
 add_executable(biketest test_main.cpp 
     ../src/Adafruit_ST7735.cpp 
     ../src/GFX.cpp

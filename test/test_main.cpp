@@ -24,9 +24,10 @@ TEST(font, font_444_444)
     tft.initR(INITR_MINI160x80);
     tft.setFont(&Open_Sans_Condensed_Bold_31);
     tft.setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft.WriteStringLen(0, 0, 40, "158", 3, 0, eRight);
-    tft.WriteStringLen(0, 0, 80, "133", 3, 0, eRight);
-    tft.WriteStringLen(0, 0, 80, "eea", 4, 0, eLeft);
+    tft.WriteStringLen(0, 0, 40, "158", 3, 0, GFX::eRight);
+    tft.WriteStringLen(0, 0, 80, "133", 3, 0, GFX::eRight);
+    tft.WriteStringLen(0, 0, 80, "Zielstrasse", 11, 0, GFX::eLeft);
+    tft.WriteStringLen(0, 0, 80, "paqy", 4, 0, GFX::eLeft);
 }
 
 int main(int argc, char **argv)
@@ -140,10 +141,14 @@ TEST(UIMain, kommot_dist_1)
     TftEmu tft;
     tft.initR(INITR_MINI160x80);
     events::EventQueue eq;
-
+    ISinkKomoot::KomootData_t d;
     UIMain ui(&tft, eq);
-    ui.DrawKomootDistance(1);
-    ui.DrawKomootDistance(999);
-    ui.DrawKomootDistance(2222);
-    ui.DrawKomootDistance(33333);
+    d.distance_m = 1;
+    ui.DrawKomootDistance(d);
+    d.distance_m = 999;
+    ui.DrawKomootDistance(d);
+    d.distance_m = 2222;
+    ui.DrawKomootDistance(d);
+    d.distance_m = 33333;
+    ui.DrawKomootDistance(d);
 }

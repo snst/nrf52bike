@@ -42,9 +42,12 @@ public:
   void DrawKomootDirection(const ISinkKomoot::KomootData_t &data);
   void SetCadenceColor(uint16_t cadence);
   void DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data);
-  uint16_t GetKomootDistanceColor(uint16_t distance_m);
+  uint16_t GetKomootDistanceBarColor(uint16_t distance_m);
+  uint16_t GetKomootDirectionColor(uint16_t distance_m);
   uint8_t komoot_view_;
   uint32_t last_komoot_view_switch_ms_;
+  uint8_t last_distance_bar_;
+  uint16_t last_direction_color_;
 };
 
 #endif

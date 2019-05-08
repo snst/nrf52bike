@@ -51,7 +51,8 @@ void Adafruit_ST7735::writedata32(uint32_t c)
 {
   _rs = 1;
   _cs = 0;
-  lcdPort.write(c);
+  uint32_t d = ((c&0x000000FF)<<24) | ((c&0x0000FF00)<<8) || ((c&0x00FF0000)>>8) || ((c&0xFF000000)>>24);
+  lcdPort.write((const char*)&d, sizeof(uint32_t), NULL, 0);
 
   _cs = 1;
 }
@@ -339,6 +340,23 @@ void Adafruit_ST7735::initR(uint8_t options)
 void Adafruit_ST7735::setAddrWindow(uint16_t x, uint16_t y, uint16_t w,
                                     uint16_t h)
 {
+  //x += _xstart;
+  //y += _ystart;
+  
+  writecommand(ST77XX_CASET); // Column addr set
+  writedata(0x00);
+  writedata(x + _xstart);     // XSTART
+  writedata(0x00);
+  writedata(w+_xstart-1);     // XEND
+
+  writecommand(ST77XX_RASET); // Row addr set
+  writedata(0x00);
+  writedata(y + _ystart);     // YSTART
+  writedata(0x00);
+  writedata(h + _ystart);     // YEND
+
+  writecommand(ST77XX_RAMWR); // write to RAM
+  /*
   x += _xstart;
   y += _ystart;
 
@@ -355,6 +373,7 @@ void Adafruit_ST7735::setAddrWindow(uint16_t x, uint16_t y, uint16_t w,
   writedata((y + h - 1) & 0xFF); // YEND
 
   writecommand(ST77XX_RAMWR); // write to RAM
+  */
 }
 
 void Adafruit_ST7735::pushColor(uint16_t color)
@@ -442,51 +461,7 @@ void Adafruit_ST7735::drawBuffer(int16_t x, int16_t y, uint8_t* buf, int16_t w)
   _cs = 1;
 }
 
-// fill a rectangle
-void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                               uint16_t color)
-{
 
-  // rudimentary clipping (drawChar w/big text requires this)
-  if ((x >= _width) || (y >= _height))
-    return;
-  if ((x + w - 1) >= _width)
-    w = _width - x;
-  if ((y + h - 1) >= _height)
-    h = _height - y;
-
-  setAddrWindow(x, y, x + w, y + h);
-
-  //uint8_t hi = color >> 8, lo = color;
-  _rs = 1;
-  _cs = 0;
-
-  uint16_t *buf = (uint16_t *)malloc(2 * w);
-  if (buf)
-  {
-    uint16_t col = color >> 8 | (color&0xFF) << 8;
-    for(int16_t k=0; k<w; k++) {
-      buf[k] = col;
-    }
-    //memset(buf, 0, 2*w);
-    for (y = h; y > 0; y--) {
-//      setAddrWindow(x, y, x + w, y + 1);
-      lcdPort.write((const char*)buf, 2*w, NULL, 0);
-    }
-    /*
-    for (y = h; y > 0; y--)
-    {
-      for (x = w; x > 0; x--)
-      {
-        lcdPort.write(hi);
-        lcdPort.write(lo);
-      }
-    }*/
-    free(buf);
-  }
-
-  _cs = 1;
-}
 
 // Pass 8-bit (each) R,G,B, get back 16-bit packed color
 uint16_t Adafruit_ST7735::Color565(uint8_t r, uint8_t g, uint8_t b)
@@ -644,3 +619,84 @@ void Adafruit_ST7735::setRotation(uint8_t m)
   writecommand(ST77XX_MADCTL);
   writedata(madctl);
 }
+
+
+void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+{
+  /*
+ if ((x >= _width) || (y >= _height))
+    return;
+  if ((x + w) > _width)
+    w = _width - x;
+  if ((y + h) > _height)
+    h = _height - y;
+*/
+   setAddrWindow(x, y, x + w, y + h - 0);
+  _rs = 1;
+  _cs = 0;
+  uint16_t max = 160;
+  uint32_t pixel = w*h;
+  if (pixel < max) {
+    max = pixel;
+  }
+
+  uint16_t n = pixel / max;
+  uint16_t r = pixel % max;
+  uint16_t* ptr = (uint16_t*) malloc(max*2);
+  if(ptr)
+  {
+    for(uint16_t i=0; i<max; i++)
+      ptr[i] = color;
+
+    while(n--) {
+      lcdPort.write((const char*)ptr, max*2, NULL, 0);  
+    }
+    if(r>0) {
+      lcdPort.write((const char*)ptr, r*2, NULL, 0);  
+    }
+    free(ptr);
+  }
+
+/*
+  while(pixel--) 
+  {
+    lcdPort.write(color & 0xFF);
+    lcdPort.write((color >> 8) & 0xFF);
+      //lcdPort.write((const char*)&color, sizeof(color), NULL, 0);
+  }
+*/
+  _cs = 1;
+}
+
+/*
+void Adafruit_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
+                               uint16_t color)
+{
+ if ((x >= _width) || (y >= _height))
+    return;
+  if ((x + w - 1) >= _width)
+    w = _width - x;
+  if ((y + h - 1) >= _height)
+    h = _height - y;
+
+  setAddrWindow(x, y, x + w, y + h);
+
+  _rs = 1;
+  _cs = 0;
+
+  uint16_t *buf = (uint16_t *)malloc(2 * w);
+  if (buf)
+  {
+    uint16_t col = color >> 8 | (color&0xFF) << 8;
+    for(int16_t k=0; k<w; k++) {
+      buf[k] = col;
+    }
+    for (y = h; y > 0; y--) {
+      lcdPort.write((const char*)buf, 2*w, NULL, 0);
+    }
+    free(buf);
+  }
+
+  _cs = 1;
+}
+*/
