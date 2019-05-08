@@ -40,7 +40,7 @@ bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
             data_.street[len - 9] = '\0';
         }
 
-        static uint16_t dist = 500;
+        static uint16_t dist = 600;
         dist-=10;
         data_.distance_m = dist;
         data_.distance_m_updated = true;

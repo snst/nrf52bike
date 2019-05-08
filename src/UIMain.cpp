@@ -9,6 +9,8 @@
 DigitalOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
+#define KOMOOT_NAV_DISTANCE (500u)
+
 #define Y_CSC_SPEED 0u
 #define Y_CSC_AVERAGE_SPEED (Y_CSC_SPEED + 40u)
 #define Y_CSC_CADENCE (Y_CSC_AVERAGE_SPEED + 40u)
@@ -105,12 +107,24 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
     FLOW("UIMain::Update(Komoot)\r\n");
 
     SetOperational();
+
+    
+
     switch (gui_mode_)
     {
     case eCsc:
+        if (data.distance_m_updated && (data.distance_m <= KOMOOT_NAV_DISTANCE) )
+        {
+            SetGuiMode(eKomoot);
+        }
         break;
     case eHybrid:
     case eKomoot:
+        if (data.distance_m_updated && (data.distance_m > KOMOOT_NAV_DISTANCE) )
+        {
+            SetGuiMode(eCsc);
+        }
+
         if (data.direction_updated || (last_direction_color_ != GetKomootDirectionColor(data.distance_m)))
         {
             DrawKomootDirection(data);

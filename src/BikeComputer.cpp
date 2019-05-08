@@ -129,19 +129,22 @@ void BikeComputer::CheckScanStop()
 
     if (csc_app.HaveFoundDevice() && komoot_app.HaveFoundDevice())
     {
-        Gui()->SetGuiMode(UIMain::eHybrid);
+        Gui()->SetGuiMode(UIMain::eCsc);
+        //Gui()->SetGuiMode(UIMain::eHybrid);
         StopScan();
         UILog("Stop scanning\n");
     }
     else if (isTimeout && (csc_app.HaveFoundDevice() || komoot_app.HaveFoundDevice()))
     {
+        Gui()->SetGuiMode(UIMain::eCsc);
+        /*
         if(csc_app.HaveFoundDevice()) {
             Gui()->SetGuiMode(UIMain::eCsc);
         } else if(komoot_app.HaveFoundDevice()) {
             Gui()->SetGuiMode(UIMain::eKomoot);
         } else {
             Gui()->SetGuiMode(UIMain::eStartup);
-        }
+        }*/
         UILog("Scan timeout\n");
         StopScan();
     }
