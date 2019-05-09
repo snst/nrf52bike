@@ -37,6 +37,21 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     uilog = this;
 }
 
+void UIMain::TouchDown()
+{
+    INFO("D\r\n");
+    static bool c = false;
+    tft_->fillScreen(ST77XX_BLACK);
+    SetGuiMode(c ? eCsc : eKomoot);
+    c = !c;
+}
+
+void UIMain::TouchUp()
+{
+//    INFO("U\r\n");
+}
+
+
 void UIMain::Update(const ISinkCsc::CscData_t &data)
 {
     FLOW("UIMain::Update(CSC)\r\n");
@@ -108,21 +123,19 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     SetOperational();
 
-    
-
     switch (gui_mode_)
     {
     case eCsc:
         if (data.distance_m_updated && (data.distance_m <= KOMOOT_NAV_DISTANCE) )
         {
-            SetGuiMode(eKomoot);
+//            SetGuiMode(eKomoot);
         }
         break;
     case eHybrid:
     case eKomoot:
         if (data.distance_m_updated && (data.distance_m > KOMOOT_NAV_DISTANCE) )
         {
-            SetGuiMode(eCsc);
+//            SetGuiMode(eCsc);
         }
 
         if (data.direction_updated || (last_direction_color_ != GetKomootDirectionColor(data.distance_m)))

@@ -25,6 +25,8 @@ public:
   virtual void Log(const char *str);
   void SetOperational();
   void SetGuiMode(eGuiMode_t mode);
+  void TouchDown();
+  void TouchUp();
 
 //protected:
   GFX* tft_;
