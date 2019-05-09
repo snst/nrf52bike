@@ -20,8 +20,8 @@ public:
     eHybrid
   };
   UIMain(GFX* tft, events::EventQueue& event_queue);
-  virtual void Update(const ISinkCsc::CscData_t &data);
-  virtual void Update(const ISinkKomoot::KomootData_t &data, bool force = false);
+  virtual void Update(const ISinkCsc::CscData_t &data, bool force);
+  virtual void Update(const ISinkKomoot::KomootData_t &data, bool force);
   virtual void Log(const char *str);
   void SetOperational();
   void SetGuiMode(eGuiMode_t mode);
@@ -34,6 +34,7 @@ public:
 
   uint8_t csc_bat_;
   eGuiMode_t gui_mode_;
+  eGuiMode_t last_auto_gui_mode_;
 
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
@@ -50,6 +51,9 @@ public:
   uint32_t last_komoot_view_switch_ms_;
   uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
+
+  ISinkCsc::CscData_t last_csc_;
+  ISinkKomoot::KomootData_t last_komoot_;
 };
 
 #endif

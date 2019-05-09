@@ -15,14 +15,6 @@ AppCsc::AppCsc(ISinkCsc *sink)
 {
     memset(&data_, 0, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));
-    data_.filtered_speed_kmhX10_updated = true;
-    data_.is_riding_updated = true;
-    data_.speed_kmhX10_updated = true;
-    data_.trip_distance_cm_updated = true;
-    data_.trip_time_ms_updated = true;
-    data_.cadence_updated = true;
-    data_.average_cadence_updated = true;
-    data_.average_speed_kmhX10_updated = true;
 }
 
 AppCsc::~AppCsc()
@@ -32,7 +24,7 @@ AppCsc::~AppCsc()
 void AppCsc::UpdateGUI()
 {
     FLOW("AppCsc::UpdateGUI()\r\n");
-    sink_->Update(data_);
+    sink_->Update(data_, false);
 }
 
 bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
@@ -74,7 +66,6 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
             double speed_kmh = 0.0f;
 
             bool is_riding = wheel_counter_diff > 0;
-            data_.is_riding_updated = data_.is_riding != is_riding;
             data_.is_riding = is_riding;
 
             data_.total_wheel_rounds += wheel_counter_diff;
@@ -85,7 +76,6 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
                 // cm/sec * 3600 / 100 / 1000
                 speed_kmhX10 = (uint16_t)((wheel_size_cm_ * wheel_counter_diff * 3.6f) / delta_sec / 10.0f);
             }
-            data_.speed_kmhX10_updated = data_.speed_kmhX10 != speed_kmhX10;
             data_.speed_kmhX10 = MIN(speed_kmhX10, MAX_SPEED);
 
             uint32_t crank_counter_diff = msg.crankCounter - last_msg_.crankCounter;
@@ -104,9 +94,7 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
                 }
             }
 
-            data_.cadence_updated = data_.cadence != cadence;
             data_.cadence = MIN(cadence, MAX_CADENCE);
-            data_.average_cadence_updated = data_.average_cadence != average_cadence;
             data_.average_cadence = MIN(average_cadence, MAX_CADENCE);
 
 
@@ -119,13 +107,11 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
             {
                 trip_time_ms += delta_ms;
             }
-            data_.trip_time_ms_updated = data_.trip_time_ms != trip_time_ms;
             data_.trip_time_ms = MIN(trip_time_ms, MAX_TIME);
 
             INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n\r\n", now_ms, delta_ms, data_.speed_kmhX10 / 10.0f, (uint16_t)data_.cadence, data_.trip_time_ms / 1000);
 
             uint32_t trip_distance_cm = (uint32_t)(wheel_size_cm_ * data_.total_wheel_rounds);
-            data_.trip_distance_cm_updated = data_.trip_distance_cm != trip_distance_cm;
             data_.trip_distance_cm = MIN(trip_distance_cm, MAX_DISTANCE);
 
             CalculateAverageSpeed();
@@ -147,7 +133,6 @@ void AppCsc::CalculateAverageSpeed()
         // cm / 100 * 3.6
         average_speed_kmhX10 = (uint16_t)(1000.0f * 0.36f * data_.trip_distance_cm / data_.trip_time_ms);
     }
-    data_.average_speed_kmhX10_updated = data_.average_speed_kmhX10 != average_speed_kmhX10;
     data_.average_speed_kmhX10 = MIN(average_speed_kmhX10, MAX_SPEED);
 
     uint32_t sum = filtered_speed_kmhX10_[0] + data_.speed_kmhX10;
@@ -157,6 +142,5 @@ void AppCsc::CalculateAverageSpeed()
     }
     filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX-1] = data_.speed_kmhX10;
     uint16_t filtered_speed_kmhX10 = sum / SPEED_FILTER_VALUES_CNT;
-    data_.filtered_speed_kmhX10_updated = data_.filtered_speed_kmhX10 != filtered_speed_kmhX10;
     data_.filtered_speed_kmhX10 = MIN(filtered_speed_kmhX10, MAX_SPEED);
 }

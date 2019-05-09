@@ -1285,3 +1285,9 @@ void GFX::invertDisplay(bool i) {
 
 /***************************************************************************/
 
+uint16_t GFX::getDigitHeight(const GFXfont *f)
+{
+    GFXglyph* glyph = &(((GFXglyph *)pgm_read_pointer(&f->glyph))['3' - ' ']);
+	uint8_t h = pgm_read_byte(&glyph->height);
+    return h;
+}

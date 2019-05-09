@@ -12,9 +12,6 @@ public:
     uint32_t distance_m;
     uint8_t direction;
     uint8_t street[MAX_KOMOOT_STREET_LEN];
-    bool distance_m_updated;
-    bool direction_updated;
-    bool street_updated;
   } KomootData_t;
 
   virtual void Update(const KomootData_t& data, bool force) = 0;

@@ -40,7 +40,7 @@ class CscTestData : public ISinkCsc
 {
   public:
     CscTestData() {}
-    virtual void Update(const CscData_t& data) {}
+    virtual void Update(const CscData_t& data, bool force) {}
 };
 
 TEST(CSC, ProcessData)

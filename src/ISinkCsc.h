@@ -17,19 +17,9 @@ public:
     uint16_t cadence;
     uint16_t average_cadence;
     bool is_riding;
-
-    bool trip_distance_cm_updated;
-    bool trip_time_ms_updated;
-    bool speed_kmhX10_updated;
-    bool filtered_speed_kmhX10_updated;
-    bool average_speed_kmhX10_updated;
-    bool cadence_updated;
-    bool average_cadence_updated;
-    bool is_riding_updated;
-
   } CscData_t;
 
-  virtual void Update(const CscData_t& data) = 0;
+  virtual void Update(const CscData_t& data, bool force) = 0;
 };
 
 #endif

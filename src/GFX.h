@@ -16,6 +16,7 @@ class GFX : public Stream {
     virtual int _putc(int value) { return write(value); };
     virtual int _getc() { return -1; };
     void setFont(const GFXfont *f);
+    static uint16_t getDigitHeight(const GFXfont *f);
 
   // This MUST be defined by the subclass:
   virtual void drawPixel(int16_t x, int16_t y, uint16_t color) = 0;    ///< Virtual drawPixel() function to draw to the screen/framebuffer/etc, must be overridden in subclass. @param x X coordinate.  @param y Y coordinate. @param color 16-bit pixel color. 

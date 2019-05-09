@@ -1,2 +1,2 @@
-mogrify -resize 70x70 +dither -alpha remove -format xbm *.png
+mogrify -resize 60x60 +dither -alpha remove -format xbm *.png
 
