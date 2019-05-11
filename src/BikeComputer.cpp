@@ -52,6 +52,13 @@ void BikeComputer::OnDisconnected(const Gap::DisconnectionCallbackParams_t *para
 void BikeComputer::OnDataRead(const GattReadCallbackParams *params)
 {
     BleManagerBase::OnDataRead(params);
+    BleAppBase *app = GetAppWithConnectionHandle(params->connHandle);
+    FLOW("~BikeComputer::OnDataRead app=%p\r\n", app);
+    if (app)
+    {
+        app->OnDataRead(params);
+    } 
+
 }
 
 BleAppBase *BikeComputer::GetAppWithConnectionHandle(Gap::Handle_t handle)

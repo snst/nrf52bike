@@ -25,3 +25,14 @@ void BleAppCsc::OnHVX(const GattHVXCallbackParams *params)
         }
     }
 }
+
+void BleAppCsc::OnDataRead(const GattReadCallbackParams *params)
+{
+    if (1 == params->len)
+    {
+        INFO("BAT: %d\r\n", params->data[0]);
+        char str[15];
+        sprintf(str, "\n\nBattery: %d\n", params->data[0]);
+        UILog(str);
+    }
+}

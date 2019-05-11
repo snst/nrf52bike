@@ -6,7 +6,8 @@
 #include "../font/Open_Sans_Condensed_Bold_49.h"
 #include "common.h"
 
-DigitalOut display_led((PinName)11);
+//DigitalOut display_led((PinName)11);
+PwmOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
 #define KOMOOT_NAV_DISTANCE (500u)
@@ -25,7 +26,9 @@ IUILog *uilog = NULL;
 #define Y_KOMMOT_STREET (105)
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
-    : tft_(tft), event_queue_(event_queue), csc_bat_(0xFF), gui_mode_(eStartup), komoot_view_(0), last_komoot_view_switch_ms_(0)
+    : tft_(tft), event_queue_(event_queue), csc_bat_(0xFF), gui_mode_(eStartup), komoot_view_(0)
+    , enable_komoot_switch_(false)
+    , enable_csc_switch_(false)
     , last_distance_bar_(0xFF), last_direction_color_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
@@ -33,7 +36,10 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     tft_->setCursor(0, 5);
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
-    display_led = 0; // enable display led
+    //display_led = 0; // enable display led
+    display_led.period_ms(1);  
+    display_led = 0.5f;
+
     uilog = this;
     memset(&last_csc_, 0, sizeof(last_csc_));
     memset(&last_komoot_, 0, sizeof(last_komoot_));
@@ -42,6 +48,15 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 void UIMain::TouchDown()
 {
     INFO("D\r\n");
+/*
+    static float f = 0.5;
+    INFO("D %f\r\n", f);
+    display_led = f;
+    f+= 0.1f;
+    if(f>1.0f)
+    f = 0.0f;
+
+    */
     switch (gui_mode_)
     {
         case eKomoot:
@@ -135,22 +150,41 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     SetOperational();
 
-    if (data.distance_m <= KOMOOT_NAV_DISTANCE)
+    if (last_komoot_.direction != data.direction) {
+        enable_komoot_switch_ = true;
+        enable_csc_switch_ = true;
+    }
+
+    if (enable_komoot_switch_) 
     {
-        if ((last_auto_gui_mode_ != gui_mode_) && (gui_mode_ == eCsc)) {
-            SetGuiMode(eKomoot);
-            last_auto_gui_mode_ = gui_mode_;
+        if (data.distance_m <= KOMOOT_NAV_DISTANCE)
+        {
+            if (gui_mode_ == eCsc) 
+            {
+                SetGuiMode(eKomoot);
+                enable_komoot_switch_ = false;
+                enable_csc_switch_ = true;
+            }
         }
-    } else {
-        if ((last_auto_gui_mode_ != gui_mode_) && (gui_mode_ == eKomoot)) {
-            SetGuiMode(eCsc);
-            last_auto_gui_mode_ = gui_mode_;
+    }
+
+    if (enable_csc_switch_)
+    {
+        if (data.distance_m > KOMOOT_NAV_DISTANCE) 
+        {
+            if (gui_mode_ == eKomoot) 
+            {
+                SetGuiMode(eCsc);
+                enable_csc_switch_ = false;
+                enable_komoot_switch_ = true;
+            }
         }
     }
 
     switch (gui_mode_)
     {
     case eKomoot:
+
         if (force || (last_komoot_.direction != data.direction) || (last_direction_color_ != GetKomootDirectionColor(data.distance_m)))
         {
             DrawKomootDirection(data);
@@ -159,28 +193,8 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         if (force || (0 != strcmp((const char*)last_komoot_.street, (const char*)data.street))) // new street => always show it
         {
             DrawKomootStreet(data);
-            last_komoot_view_switch_ms_ = GetMillis();
             komoot_view_ = 0;
         }
-
-
-        /*else if (GetMillis() - last_komoot_view_switch_ms_ > 2000u)
-        {
-            last_komoot_view_switch_ms_ = GetMillis();
-            komoot_view_ = (komoot_view_ + 1u) % 2u;
-            if (0u == komoot_view_)
-            {
-                DrawKomootStreet(data);
-            }
-            else
-            {
-                DrawKomootDistance(data);
-            }
-        }
-        else if ((1 == komoot_view_) && (last_komoot_.distance_m != data.distance_m))
-        {
-            DrawKomootDistance(data);
-        }*/
 
         if (force || (last_komoot_.distance_m != data.distance_m))
         {
@@ -252,9 +266,10 @@ void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
 {
     char str[10];
     uint16_t len = sprintf(str, ".%i", speed_kmhX10 % 10);
+  
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
     tft_->setTextColor(color);
-    tft_->WriteStringLen(56, y + 12, 20, str, len, 0, GFX::eLeft);
+    tft_->WriteStringLen(56, y + 12, 24, str, len, 0, GFX::eLeft);
 
     len = sprintf(str, "%i", speed_kmhX10 / 10);
     tft_->setFont(&Open_Sans_Condensed_Bold_49);

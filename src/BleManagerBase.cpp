@@ -35,22 +35,22 @@ void BleManagerBase::OnDisconnected(const Gap::DisconnectionCallbackParams_t *pa
 
 void BleManagerBase::OnDataRead(const GattReadCallbackParams *params)
 {
-    FLOW("~BleManagerBase::OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
+    INFO("~BleManagerBase::OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
     for (unsigned index = 0; index < params->len; index++)
     {
-        FLOW(" %02x", params->data[index]);
+        INFO(" %02x", params->data[index]);
     }
-    FLOW("\r\n");
+    INFO("\r\n");
 }
 
 void BleManagerBase::OnHVX(const GattHVXCallbackParams *params)
 {
-    FLOW("~BleManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
+    INFO("~BleManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
     for (unsigned index = 0; index < params->len; index++)
     {
-        FLOW(" %02x", params->data[index]);
+        INFO(" %02x", params->data[index]);
     }
-    FLOW("\r\n");
+    INFO("\r\n");
 }
 
 void BleManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)

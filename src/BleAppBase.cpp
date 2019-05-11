@@ -7,7 +7,8 @@ BleAppBase::BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char
                                                                                                         ble_(ble_interface),
                                                                                                         _post_init_cb(),
                                                                                                         desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
-                                                                                                        found_characteristic(false),
+                                                                                                        found_characteristic_bat_(false),
+                                                                                                        found_characteristic_(false),
                                                                                                         found_desc2902_(false),
                                                                                                         found_device_(false),
                                                                                                         app_callback_(NULL),
@@ -79,14 +80,21 @@ void BleAppBase::OnServiceFound(const DiscoveredService *service)
 
 void BleAppBase::OnServiceCharacteristicFound(const DiscoveredCharacteristic *param)
 {
-  INFO("~BleAppBase::OnServiceCharacteristicFound() => %s, UUID-%x valueHandle=%u, declHandle=%u, props[%x]\r\n", name_, param->getUUID().getShortUUID(), param->getValueHandle(), param->getDeclHandle(), (uint8_t)param->getProperties().broadcast());
+  FLOW("~BleAppBase::OnServiceCharacteristicFound() => %s, UUID-%x valueHandle=%u, declHandle=%u, props[%x]\r\n", name_, param->getUUID().getShortUUID(), param->getValueHandle(), param->getDeclHandle(), (uint8_t)param->getProperties().broadcast());
   //DBG("~BleAppBase::OnServiceCharacteristicFound() LONG-%x %x %x %x %x\r\n", param->getUUID().getBaseUUID()[0], param->getUUID().getBaseUUID()[1], param->getUUID().getBaseUUID()[2], param->getUUID().getBaseUUID()[3], param->getUUID().getBaseUUID()[4]);
   if (param->getUUID().getShortUUID() == characteristic_id)
   {
     INFO("~BleAppBase:: => %s -> characteristic 0x%x\r\n", name_, characteristic_id);
     characteristic_ = *param;
-    found_characteristic = true;
+    found_characteristic_ = true;
     UILog("char.");
+  }
+  if (param->getUUID().getShortUUID() == 0x2a19u)
+  {
+    INFO("~BleAppBase:: => %s -> characteristic bat\r\n", name_);
+    characteristic_bat_ = *param;
+    found_characteristic_bat_ = true;
+    UILog("char bat.");
   }
 }
 
@@ -133,13 +141,26 @@ void BleAppBase::OnCharacteristicDescriptorsFound(const CharacteristicDescriptor
 void BleAppBase::OnAppReady()
 {
   INFO("~BleAppBase::OnAppReady() => %s\r\n", name_);
-  RequestNotify(true);
+
+  RequestNotify();
+
+  event_queue_.call_in(100, mbed::callback(this, &BleAppBase::RequestBatteryLevel));
 
   if (NULL != app_callback_)
   {
     app_callback_->OnAppReady(this);
   }
 }
+
+bool BleAppBase::RequestBatteryLevel()
+{
+  if (found_characteristic_bat_) {
+    ble_error_t err = characteristic_bat_.read(0);
+    INFO("~BleAppBase::RequestBatteryLevel(), ret=0x%x\r\n", err);
+  }
+  return found_characteristic_bat_;
+}
+
 
 void BleAppBase::OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
@@ -154,8 +175,9 @@ void BleAppBase::StartCharacteristicDescriptorsDiscovery(DiscoveredCharacteristi
   INFO("~BleAppBase::StartCharacteristicDescriptorsDiscovery() => %s, err=0x%x\r\n", name_, err);
 }
 
-void BleAppBase::RequestNotify(bool enable)
+void BleAppBase::RequestNotify()
 {
+  bool enable = true;
   uint16_t value = enable ? BLE_HVX_NOTIFICATION : 0;
   ble_error_t err = ble_.gattClient().write(
       GattClient::GATT_OP_WRITE_CMD,
@@ -198,7 +220,7 @@ void BleAppBase::FindCharacteristic(uint16_t id)
 
 bool BleAppBase::FoundCharacteristic()
 {
-  return found_characteristic;
+  return found_characteristic_;
 }
 
 bool BleAppBase::FoundDescNotify()

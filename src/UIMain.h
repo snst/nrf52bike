@@ -34,8 +34,7 @@ public:
 
   uint8_t csc_bat_;
   eGuiMode_t gui_mode_;
-  eGuiMode_t last_auto_gui_mode_;
-
+  
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
   void DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color = 0xFFFF);
@@ -48,9 +47,10 @@ public:
   uint16_t GetKomootDistanceBarColor(uint16_t distance_m);
   uint16_t GetKomootDirectionColor(uint16_t distance_m);
   uint8_t komoot_view_;
-  uint32_t last_komoot_view_switch_ms_;
   uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
+  bool enable_komoot_switch_;
+  bool enable_csc_switch_;
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;

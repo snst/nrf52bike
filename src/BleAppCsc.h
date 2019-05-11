@@ -12,6 +12,7 @@ class BleAppCsc : public BleAppBase
     BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, ISinkCsc* sink);
     virtual ~BleAppCsc();
     void OnHVX(const GattHVXCallbackParams *params);
+    void OnDataRead(const GattReadCallbackParams *params);
   protected:
     AppCsc csc_;
 };

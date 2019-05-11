@@ -43,7 +43,7 @@ public:
   virtual void OnAppReady();
   virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params);
   virtual void StartCharacteristicDescriptorsDiscovery(DiscoveredCharacteristic &characteristic);
-  virtual void RequestNotify(bool enable);
+  virtual void RequestNotify();
   void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc);
   virtual void OnDataRead(const GattReadCallbackParams *params);
   virtual void OnHVX(const GattHVXCallbackParams *params);
@@ -55,6 +55,7 @@ public:
   bool FoundDescNotify();
   DiscoveredCharacteristic &GetCharacteristic();
   void SetAppCallback(IAppCallback* cb);
+  bool RequestBatteryLevel();
     
   template <typename ContextType>
   FunctionPointerWithContext<ContextType> as_cb(void (Self::*member)(ContextType context))
@@ -69,12 +70,14 @@ protected:
 
   Gap::Handle_t connection_handle_;
   GattAttribute::Handle_t descriptor_handle_;
+  DiscoveredCharacteristic characteristic_bat_;
   DiscoveredCharacteristic characteristic_;
   DiscoveredCharacteristicDescriptor desc2902_;
   BLEProtocol::AddressBytes_t device_addr_;
   BLEProtocol::AddressType_t device_addr_type_;
   uint16_t characteristic_id;
-  bool found_characteristic;
+  bool found_characteristic_bat_;
+  bool found_characteristic_;
   bool found_desc2902_;
   bool found_device_;
   IAppCallback* app_callback_;
