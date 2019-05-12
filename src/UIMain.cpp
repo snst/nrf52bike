@@ -30,6 +30,8 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     , enable_komoot_switch_(false)
     , enable_csc_switch_(false)
     , last_distance_bar_(0xFF), last_direction_color_(0)
+    , longpress_handled_(false)
+    , display_brightness_(5)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -38,40 +40,62 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     tft_->setFont(NULL);
     //display_led = 0; // enable display led
     display_led.period_ms(1);  
-    display_led = 0.5f;
+    display_led = (float)display_brightness_ / 10.0f;
 
     uilog = this;
     memset(&last_csc_, 0, sizeof(last_csc_));
     memset(&last_komoot_, 0, sizeof(last_komoot_));
 }
 
+#define LONGPRESS_MS (1000u)
+
+
+void UIMain::LongPress()
+{
+    INFO("LONGPRESS EVENT\r\n");
+    longpress_handled_ = true;
+    switch (gui_mode_)
+        {
+            case eSettings:
+            SetGuiMode(eCsc);    
+            break;
+            default:
+            SetGuiMode(eSettings);    
+            break;
+        }
+}
+
 void UIMain::TouchDown()
 {
-    INFO("D\r\n");
-/*
-    static float f = 0.5;
-    INFO("D %f\r\n", f);
-    display_led = f;
-    f+= 0.1f;
-    if(f>1.0f)
-    f = 0.0f;
-
-    */
-    switch (gui_mode_)
-    {
-        case eKomoot:
-            SetGuiMode(eCsc);
-        break;
-        default:
-        case eCsc:
-            SetGuiMode(eKomoot);
-        break;
-    }
+    //INFO("D\r\n");
+    touch_down_ms_ = GetMillis();
+    longpress_id_ = event_queue_.call_in(500, mbed::callback(this, &UIMain::LongPress));
+    longpress_handled_ = false;
 }
 
 void UIMain::TouchUp()
 {
-//    INFO("U\r\n");
+    if (!longpress_handled_) {
+        event_queue_.cancel(longpress_id_);
+        INFO("SHORTPRESS UP\r\n");
+        switch (gui_mode_)
+        {
+            default:
+            case eKomoot:
+                SetGuiMode(eCsc);
+            break;
+            case eCsc:
+                SetGuiMode(eKomoot);
+            break;
+            case eSettings:
+                IncDislayBrightness();
+                DrawSettings();
+                break;
+        }
+    }
+    else {
+        INFO("LONGPRESS UP\r\n");
+    }
 }
 
 
@@ -115,7 +139,6 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
             DrawTime(Y_CSC_TRAVEL_TIME, data.trip_time_ms / 1000, color);
         }
         break;
-    case eHybrid:
     case eKomoot:
     /*
         if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
@@ -254,9 +277,13 @@ void UIMain::SetGuiMode(eGuiMode_t mode)
             case eKomoot:
                 Update(last_komoot_, true);
             break;
-            default:
             case eCsc:
                 Update(last_csc_, true);
+            break;
+            case eSettings:
+                DrawSettings();
+                break;
+            default:
             break;
         }   
     } 
@@ -388,4 +415,27 @@ void UIMain::DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data)
             tft_->fillRect(0, k, w, h-k, color);
         }
     }
+}
+
+void UIMain::UpdateBat(uint8_t val)
+{
+    csc_bat_ = val;
+}
+
+void UIMain::DrawSettings()
+{
+    char str[10];
+    uint16_t len = sprintf(str, "Bat %i", csc_bat_);
+    tft_->setFont(&Open_Sans_Condensed_Bold_31);
+    tft_->setTextColor(0xFFFF);
+    tft_->WriteStringLen(0, 5, 80, str, len, 0, GFX::eCenter);
+
+    len = sprintf(str, "Bri %i", display_brightness_);
+    tft_->WriteStringLen(0, 35, 80, str, len, 0, GFX::eCenter);
+}
+
+void UIMain::IncDislayBrightness()
+{
+    display_brightness_ = (display_brightness_ < 10) ? (display_brightness_ + 1) : 0;
+    display_led = (float)display_brightness_ / 10.0f;
 }

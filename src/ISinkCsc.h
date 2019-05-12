@@ -20,6 +20,7 @@ public:
   } CscData_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;
+  virtual void UpdateBat(uint8_t val) = 0;
 };
 
 #endif

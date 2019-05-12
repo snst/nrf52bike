@@ -17,11 +17,12 @@ public:
     eStartup,
     eCsc,
     eKomoot,
-    eHybrid
+    eSettings
   };
   UIMain(GFX* tft, events::EventQueue& event_queue);
   virtual void Update(const ISinkCsc::CscData_t &data, bool force);
   virtual void Update(const ISinkKomoot::KomootData_t &data, bool force);
+  virtual void UpdateBat(uint8_t val);
   virtual void Log(const char *str);
   void SetOperational();
   void SetGuiMode(eGuiMode_t mode);
@@ -32,7 +33,6 @@ public:
   GFX* tft_;
   events::EventQueue& event_queue_;
 
-  uint8_t csc_bat_;
   eGuiMode_t gui_mode_;
   
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
@@ -46,11 +46,19 @@ public:
   void DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data);
   uint16_t GetKomootDistanceBarColor(uint16_t distance_m);
   uint16_t GetKomootDirectionColor(uint16_t distance_m);
+  void LongPress();
+  void DrawSettings();
   uint8_t komoot_view_;
   uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
   bool enable_komoot_switch_;
   bool enable_csc_switch_;
+  uint32_t touch_down_ms_;
+  int longpress_id_;
+  bool longpress_handled_;
+  uint8_t csc_bat_;
+  uint8_t display_brightness_;
+  void IncDislayBrightness();
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;

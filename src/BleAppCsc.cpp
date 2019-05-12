@@ -34,5 +34,6 @@ void BleAppCsc::OnDataRead(const GattReadCallbackParams *params)
         char str[15];
         sprintf(str, "\n\nBattery: %d\n", params->data[0]);
         UILog(str);
+        csc_.sink_->UpdateBat(params->data[0]);
     }
 }
