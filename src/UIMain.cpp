@@ -7,7 +7,6 @@
 #include "common.h"
 
 //DigitalOut display_led((PinName)11);
-PwmOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
 #define KOMOOT_NAV_DISTANCE (500u)
@@ -26,12 +25,15 @@ IUILog *uilog = NULL;
 #define Y_KOMMOT_STREET (105)
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
-    : tft_(tft), event_queue_(event_queue), csc_bat_(0xFF), gui_mode_(eStartup), komoot_view_(0)
+    : tft_(tft), event_queue_(event_queue)
+//    , csc_bat_(0xFF)
+    , gui_mode_(eStartup), komoot_view_(0)
     , enable_komoot_switch_(false)
     , enable_csc_switch_(false)
     , last_distance_bar_(0xFF), last_direction_color_(0)
     , longpress_handled_(false)
-    , display_brightness_(5)
+//    , display_brightness_(5)
+    , uisettings_(tft, this)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -39,8 +41,6 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
     //display_led = 0; // enable display led
-    display_led.period_ms(1);  
-    display_led = (float)display_brightness_ / 10.0f;
 
     uilog = this;
     memset(&last_csc_, 0, sizeof(last_csc_));
@@ -57,10 +57,11 @@ void UIMain::LongPress()
     switch (gui_mode_)
         {
             case eSettings:
-            SetGuiMode(eCsc);    
+            //SetUiMode(eCsc);    
+            uisettings_.LongPress();
             break;
             default:
-            SetGuiMode(eSettings);    
+            SetUiMode(eSettings);    
             break;
         }
 }
@@ -82,14 +83,15 @@ void UIMain::TouchUp()
         {
             default:
             case eKomoot:
-                SetGuiMode(eCsc);
+                SetUiMode(eCsc);
             break;
             case eCsc:
-                SetGuiMode(eKomoot);
+                SetUiMode(eKomoot);
             break;
             case eSettings:
-                IncDislayBrightness();
-                DrawSettings();
+                //IncDislayBrightness();
+                //DrawSettings();
+                uisettings_.ShortPress();
                 break;
         }
     }
@@ -184,7 +186,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         {
             if (gui_mode_ == eCsc) 
             {
-                SetGuiMode(eKomoot);
+                SetUiMode(eKomoot);
                 enable_komoot_switch_ = false;
                 enable_csc_switch_ = true;
             }
@@ -197,7 +199,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         {
             if (gui_mode_ == eKomoot) 
             {
-                SetGuiMode(eCsc);
+                SetUiMode(eCsc);
                 enable_csc_switch_ = false;
                 enable_komoot_switch_ = true;
             }
@@ -261,13 +263,13 @@ void UIMain::SetOperational()
     {
         INFO("Disable log\r\n");
         uilog = NULL;
-        SetGuiMode(eCsc);
+        SetUiMode(eCsc);
     }
 }
 
-void UIMain::SetGuiMode(eGuiMode_t mode)
+void UIMain::SetUiMode(eUiMode_t mode)
 {
-    INFO("SetGuiMode %d\r\n", mode);
+    INFO("SetUiMode %d\r\n", mode);
     if (gui_mode_ != mode) 
     {
         gui_mode_ = mode;
@@ -281,7 +283,8 @@ void UIMain::SetGuiMode(eGuiMode_t mode)
                 Update(last_csc_, true);
             break;
             case eSettings:
-                DrawSettings();
+                //DrawSettings();
+                uisettings_.Draw();
                 break;
             default:
             break;
@@ -419,9 +422,10 @@ void UIMain::DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data)
 
 void UIMain::UpdateBat(uint8_t val)
 {
-    csc_bat_ = val;
+    //csc_bat_ = val;
+    uisettings_.UpdateBat(val);
 }
-
+/*
 void UIMain::DrawSettings()
 {
     char str[10];
@@ -438,4 +442,4 @@ void UIMain::IncDislayBrightness()
 {
     display_brightness_ = (display_brightness_ < 10) ? (display_brightness_ + 1) : 0;
     display_led = (float)display_brightness_ / 10.0f;
-}
+}*/

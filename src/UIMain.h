@@ -1,5 +1,5 @@
-#ifndef BIKE_GUI_H_
-#define BIKE_GUI_H_
+#ifndef UIMAIN_H_
+#define UIMAIN_H_
 
 #include <mbed_events.h>
 #include <rtos.h>
@@ -8,24 +8,20 @@
 #include "ISinkCsc.h"
 #include "ISinkKomoot.h"
 #include "IUILog.h"
+#include "UISettings.h"
+#include "IUIMode.h"
 
-class UIMain : public ISinkCsc, public ISinkKomoot, public IUILog
+class UIMain : public ISinkCsc, public ISinkKomoot, public IUILog, public IUIMode
 {
 public:
-  enum eGuiMode_t
-  {
-    eStartup,
-    eCsc,
-    eKomoot,
-    eSettings
-  };
+
   UIMain(GFX* tft, events::EventQueue& event_queue);
   virtual void Update(const ISinkCsc::CscData_t &data, bool force);
   virtual void Update(const ISinkKomoot::KomootData_t &data, bool force);
   virtual void UpdateBat(uint8_t val);
   virtual void Log(const char *str);
   void SetOperational();
-  void SetGuiMode(eGuiMode_t mode);
+  void SetUiMode(eUiMode_t mode);
   void TouchDown();
   void TouchUp();
 
@@ -33,7 +29,7 @@ public:
   GFX* tft_;
   events::EventQueue& event_queue_;
 
-  eGuiMode_t gui_mode_;
+  eUiMode_t gui_mode_;
   
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
@@ -56,12 +52,13 @@ public:
   uint32_t touch_down_ms_;
   int longpress_id_;
   bool longpress_handled_;
-  uint8_t csc_bat_;
-  uint8_t display_brightness_;
+//  uint8_t csc_bat_;
+//  uint8_t display_brightness_;
   void IncDislayBrightness();
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;
+  UISettings uisettings_;
 };
 
 #endif
