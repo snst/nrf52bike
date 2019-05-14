@@ -15,6 +15,7 @@ add_executable(biketest test_main.cpp
     ../src/common.cpp
     ../src/UIMain.cpp
     ../src/icons.cpp
+    ../src/UISettings.cpp
     )
 target_link_libraries(biketest ${GTEST_LIBRARIES} pthread)
 include_directories(. ../font ../src)

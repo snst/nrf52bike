@@ -8,6 +8,7 @@
 #include "IUILog.h"
 #include "UIMain.h"
 #include "common.h"
+#include "UISettings.h"
 
 TEST(font, font_h2)
 {
@@ -41,6 +42,7 @@ class CscTestData : public ISinkCsc
   public:
     CscTestData() {}
     virtual void Update(const CscData_t& data, bool force) {}
+    virtual void UpdateBat(uint8_t val) {}
 };
 
 TEST(CSC, ProcessData)
@@ -151,4 +153,20 @@ TEST(UIMain, kommot_dist_1)
     ui.DrawKomootDistance(d);
     d.distance_m = 33333;
     ui.DrawKomootDistance(d);
+}
+
+TEST(UISettings, test1)
+{
+    TftEmu tft;
+    tft.initR(INITR_MINI160x80);
+    events::EventQueue eq;
+    UIMain ui(&tft, eq);
+    UISettings s(&tft, &ui);
+    s.LongPress();
+    s.HandleEvent(eShort);
+    s.HandleEvent(eShort);
+    s.HandleEvent(eShort);
+    s.HandleEvent(eLong);
+    s.HandleEvent(eShort);
+    s.HandleEvent(eLong);
 }

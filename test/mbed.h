@@ -51,12 +51,14 @@ static void wait_ms(uint32_t ms) {}
 namespace mbed
 {
     static void* stub_callback() {return NULL; }
-    /*
-    class stub_callback
-    {
-        public:
-        stub_callback() {}
-    };*/
 }
+
+class PwmOut
+{
+    public:
+    PwmOut(PinName n) {}
+    void period_ms(uint32_t v) {}
+    void operator=(float f) {}
+};
 
 #endif
