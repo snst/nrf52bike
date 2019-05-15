@@ -960,8 +960,11 @@ uint16_t GFX::GetStringLen(const char* chars, uint16_t len)
 }
 
 
-void GFX::WriteStringLen(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, uint16_t len, uint8_t border, eAlign_t align)
+void GFX::WriteStringLen(uint16_t ox, uint16_t oy, uint16_t ow, const char* chars, int16_t len, uint8_t border, eAlign_t align)
 {
+    if (-1 == len) {
+        len = strlen(chars);
+    }
     uint16_t char_width = GetStringLen(chars, len);
     int16_t skip_x = 0;
     switch(align)

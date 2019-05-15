@@ -9,8 +9,6 @@
 //DigitalOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
-#define KOMOOT_NAV_DISTANCE (500u)
-
 #define Y_CSC_SPEED 0u
 #define Y_CSC_AVERAGE_SPEED (Y_CSC_SPEED + 40u)
 #define Y_CSC_CADENCE (Y_CSC_AVERAGE_SPEED + 40u)
@@ -24,6 +22,8 @@ IUILog *uilog = NULL;
 #define Y_KOMMOT_DISTANCE (62u)
 #define Y_KOMMOT_STREET (105)
 
+PwmOut display_led((PinName)11);
+
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     : tft_(tft), event_queue_(event_queue)
 //    , csc_bat_(0xFF)
@@ -34,6 +34,9 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     , longpress_handled_(false)
 //    , display_brightness_(5)
     , uisettings_(tft, this)
+    , led_event_id_(0)
+    , ignore_touch_up_(false)
+    , enable_komoot_led_alert_(false)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -41,6 +44,9 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
     //display_led = 0; // enable display led
+    display_led.period_ms(1);  
+    //SetUiBrightness(uisettings_.display_brightness_);
+    LedOn();
 
     uilog = this;
     memset(&last_csc_, 0, sizeof(last_csc_));
@@ -68,10 +74,12 @@ void UIMain::LongPress()
 
 void UIMain::TouchDown()
 {
+    ignore_touch_up_ = (0 == led_event_id_);
     //INFO("D\r\n");
     touch_down_ms_ = GetMillis();
     longpress_id_ = event_queue_.call_in(500, mbed::callback(this, &UIMain::LongPress));
     longpress_handled_ = false;
+    LedOn();
 }
 
 void UIMain::TouchUp()
@@ -79,20 +87,22 @@ void UIMain::TouchUp()
     if (!longpress_handled_) {
         event_queue_.cancel(longpress_id_);
         INFO("SHORTPRESS UP\r\n");
-        switch (gui_mode_)
-        {
-            default:
-            case eKomoot:
-                SetUiMode(eCsc);
-            break;
-            case eCsc:
-                SetUiMode(eKomoot);
-            break;
-            case eSettings:
-                //IncDislayBrightness();
-                //DrawSettings();
-                uisettings_.ShortPress();
+        if (!ignore_touch_up_) {
+            switch (gui_mode_)
+            {
+                default:
+                case eKomoot:
+                    SetUiMode(eCsc);
                 break;
+                case eCsc:
+                    SetUiMode(eKomoot);
+                break;
+                case eSettings:
+                    //IncDislayBrightness();
+                    //DrawSettings();
+                    uisettings_.ShortPress();
+                    break;
+            }
         }
     }
     else {
@@ -178,14 +188,21 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
     if (last_komoot_.direction != data.direction) {
         enable_komoot_switch_ = true;
         enable_csc_switch_ = true;
+        enable_komoot_led_alert_ = true;
+    }
+
+    if (enable_komoot_led_alert_ && (data.distance_m <= 100)) {
+        LedOn();
+        enable_komoot_led_alert_ = false;
     }
 
     if (enable_komoot_switch_) 
     {
-        if (data.distance_m <= KOMOOT_NAV_DISTANCE)
+        if (data.distance_m <= uisettings_.komoot_alert_dist_)
         {
             if (gui_mode_ == eCsc) 
             {
+                LedOn();
                 SetUiMode(eKomoot);
                 enable_komoot_switch_ = false;
                 enable_csc_switch_ = true;
@@ -195,7 +212,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     if (enable_csc_switch_)
     {
-        if (data.distance_m > KOMOOT_NAV_DISTANCE) 
+        if (data.distance_m > uisettings_.komoot_alert_dist_) 
         {
             if (gui_mode_ == eKomoot) 
             {
@@ -424,6 +441,26 @@ void UIMain::UpdateBat(uint8_t val)
 {
     //csc_bat_ = val;
     uisettings_.UpdateBat(val);
+}
+
+void UIMain::LedOff()
+{
+    led_event_id_ = 0;
+    SetUiBrightness(10);
+}
+
+void UIMain::LedOn()
+{
+    if( 0 != led_event_id_) {
+        event_queue_.cancel(led_event_id_);
+    }
+    led_event_id_ = event_queue_.call_in(uisettings_.display_time_*1000,  mbed::callback(this, &UIMain::LedOff));
+    SetUiBrightness(uisettings_.display_brightness_);
+}
+
+void UIMain::SetUiBrightness(uint8_t val)
+{
+    display_led = (float)val / 10.0f;
 }
 /*
 void UIMain::DrawSettings()

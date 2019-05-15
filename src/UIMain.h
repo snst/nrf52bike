@@ -24,6 +24,9 @@ public:
   void SetUiMode(eUiMode_t mode);
   void TouchDown();
   void TouchUp();
+  void LedOn();
+  void LedOff();
+  void SetUiBrightness(uint8_t val);
 
 //protected:
   GFX* tft_;
@@ -55,6 +58,9 @@ public:
 //  uint8_t csc_bat_;
 //  uint8_t display_brightness_;
   void IncDislayBrightness();
+  int led_event_id_;
+  bool ignore_touch_up_;
+  bool enable_komoot_led_alert_;
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;

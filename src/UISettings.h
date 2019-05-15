@@ -6,14 +6,11 @@
 #include "IUIMode.h"
 
 typedef enum eSmState {
+    eBat,
     eDim,
-    eDimSel,
     eTime,
-    eTimeSel,
     eDist,
-    eDistSel,
     eExit,
-    eExitSel
 } eSmState_t;
 
 typedef enum eSmEvent {
@@ -28,6 +25,7 @@ typedef void (UISettings::*SmFunc)(void);
 
 typedef struct SmEntry {
     eSmState state;
+    const char* name;
     eSmEvent event;
     SmFunc func;
     eSmState next;
@@ -47,16 +45,18 @@ class UISettings
     void UpdateBat(uint8_t val);
     void HandleEvent(eSmEvent ev);
     void LeaveSettings();
+    SmEntry_t* GetStateEntry(eSmState state);
 
     uint8_t csc_bat_;
     uint8_t display_brightness_;
     uint8_t display_time_;
-    uint8_t komoot_alert_dist_;
+    uint16_t komoot_alert_dist_;
     GFX* tft_;
     IUIMode* uimode_;
     eSmState_t sm_state_;
+    bool edit_mode_;
 
-    SmEntry setting_sm[14];
+    SmEntry setting_sm[5];
 
 };
 
