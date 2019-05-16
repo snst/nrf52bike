@@ -10,6 +10,7 @@ typedef enum eSmState {
     eDim,
     eTime,
     eDist,
+    eSave,
     eExit,
 } eSmState_t;
 
@@ -41,6 +42,8 @@ class UISettings
     void IncDislayBrightness();
     void IncDislayTime();
     void IncKomootAlertDist();
+    void SaveSettings();
+    void LoadSettings();
     void Draw();
     void UpdateBat(uint8_t val);
     void HandleEvent(eSmEvent ev);
@@ -48,15 +51,20 @@ class UISettings
     SmEntry_t* GetStateEntry(eSmState state);
 
     uint8_t csc_bat_;
-    uint8_t display_brightness_;
-    uint8_t display_time_;
-    uint16_t komoot_alert_dist_;
     GFX* tft_;
     IUIMode* uimode_;
     eSmState_t sm_state_;
     bool edit_mode_;
 
-    SmEntry setting_sm[5];
+    SmEntry setting_sm[6];
+
+    typedef struct SettingsData {
+        uint8_t display_brightness;
+        uint8_t display_time;
+        uint16_t komoot_alert_dist;
+    } SettingsData_t;
+
+    SettingsData_t settings_;
 
 };
 

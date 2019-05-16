@@ -198,7 +198,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     if (enable_komoot_switch_) 
     {
-        if (data.distance_m <= uisettings_.komoot_alert_dist_)
+        if (data.distance_m <= uisettings_.settings_.komoot_alert_dist)
         {
             if (gui_mode_ == eCsc) 
             {
@@ -212,7 +212,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     if (enable_csc_switch_)
     {
-        if (data.distance_m > uisettings_.komoot_alert_dist_) 
+        if (data.distance_m > uisettings_.settings_.komoot_alert_dist) 
         {
             if (gui_mode_ == eKomoot) 
             {
@@ -454,8 +454,8 @@ void UIMain::LedOn()
     if( 0 != led_event_id_) {
         event_queue_.cancel(led_event_id_);
     }
-    led_event_id_ = event_queue_.call_in(uisettings_.display_time_*1000,  mbed::callback(this, &UIMain::LedOff));
-    SetUiBrightness(uisettings_.display_brightness_);
+    led_event_id_ = event_queue_.call_in(uisettings_.settings_.display_time*1000,  mbed::callback(this, &UIMain::LedOff));
+    SetUiBrightness(uisettings_.settings_.display_brightness);
 }
 
 void UIMain::SetUiBrightness(uint8_t val)
