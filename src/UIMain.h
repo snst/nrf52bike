@@ -27,13 +27,14 @@ public:
   void LedOn();
   void LedOff();
   void SetUiBrightness(uint8_t val);
-
+  
 //protected:
   GFX* tft_;
   events::EventQueue& event_queue_;
 
   eUiMode_t gui_mode_;
   
+  void DrawOfflineState(uint16_t y);
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
   void DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color = 0xFFFF);
@@ -51,17 +52,16 @@ public:
   uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
   bool enable_komoot_switch_;
-  bool enable_csc_switch_;
+  bool switched_to_csc_;
   uint32_t touch_down_ms_;
   int longpress_id_;
   bool longpress_handled_;
-//  uint8_t csc_bat_;
-//  uint8_t display_brightness_;
-  void IncDislayBrightness();
+  void IncBrightnessDisplayOn();
+  void IncBrightnessDisplayOff();
   int led_event_id_;
   bool ignore_touch_up_;
-  bool enable_komoot_led_alert_50_;
-  bool enable_komoot_led_alert_100_;
+  bool switched_to_komoot_100_;
+  bool switched_to_komoot_500_;
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;

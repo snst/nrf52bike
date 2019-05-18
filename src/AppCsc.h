@@ -4,6 +4,7 @@
 #include "mbed.h"
 #include <stdint.h>
 #include "ISinkCsc.h"
+#include "events/EventQueue.h"
 
 #define SPEED_FILTER_VALUES_CNT 3u
 #define SPEED_FILTER_VALUES_MAX (SPEED_FILTER_VALUES_CNT-1u)
@@ -11,11 +12,12 @@
 class AppCsc
 {
   public:
-    AppCsc(ISinkCsc* sink);
+    AppCsc(ISinkCsc* sink, events::EventQueue &event_queue);
     virtual ~AppCsc();
     void UpdateGUI();
     bool ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len);
     void CalculateAverageSpeed();
+    void CheckOnline();
 
   //protected:
     typedef struct cscMsg
@@ -35,6 +37,8 @@ class AppCsc
     uint32_t crank_event_sum_;
     uint16_t filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX];
     bool is_init_;
+    events::EventQueue &event_queue_;
+    uint32_t last_online_check_ms_;
 };
 
 #endif

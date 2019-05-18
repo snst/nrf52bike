@@ -7,7 +7,7 @@
 
 BleAppCsc::BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, ISinkCsc* sink)
     : BleAppBase(event_queue, ble_interface, "CSC"),
-     csc_(sink)
+     csc_(sink, event_queue)
 {
     FindCharacteristic(0x2A5B);
 }

@@ -17,6 +17,7 @@ public:
     uint16_t cadence;
     uint16_t average_cadence;
     bool is_riding;
+    bool is_online;
   } CscData_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;

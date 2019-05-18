@@ -7,7 +7,8 @@
 
 typedef enum eSmState {
     eBat,
-    eDim,
+    eLedOn,
+    eLedOff,
     eTime,
     eDist,
     eSave,
@@ -39,7 +40,8 @@ class UISettings
     UISettings(GFX* tft, IUIMode* mode);
     void LongPress();
     void ShortPress();
-    void IncDislayBrightness();
+    void IncBrightnessDisplayOn();
+    void IncBrightnessDisplayOff();
     void IncDislayTime();
     void IncKomootAlertDist();
     void SaveSettings();
@@ -56,12 +58,14 @@ class UISettings
     eSmState_t sm_state_;
     bool edit_mode_;
 
-    SmEntry setting_sm[6];
+    SmEntry setting_sm[7];
 
     typedef struct SettingsData {
-        uint8_t display_brightness;
-        uint8_t display_time;
         uint16_t komoot_alert_dist;
+        uint8_t display_brightness_on;
+        uint8_t display_brightness_off;
+        uint8_t display_time;
+        uint8_t pad[3];
     } SettingsData_t;
 
     SettingsData_t settings_;

@@ -15,10 +15,6 @@ IUILog *uilog = NULL;
 #define Y_CSC_TRAVEL_DISTANCE (Y_CSC_CADENCE + 26u)
 #define Y_CSC_TRAVEL_TIME (Y_CSC_TRAVEL_DISTANCE + 26u)
 
-//#define Y_KOMOOT_MIDDLE_START (72u)
-//#define Y_KOMOOT_BOTTOM_START (160u-22u-2u)
-//#define Y_KOMOOT_TRIP_DISTANCE Y_KOMOOT_BOTTOM_START
-//#define Y_KOMOOT_SPEED Y_KOMOOT_BOTTOM_START
 #define Y_KOMMOT_DISTANCE (62u)
 #define Y_KOMMOT_STREET (105)
 
@@ -26,27 +22,23 @@ PwmOut display_led((PinName)11);
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     : tft_(tft), event_queue_(event_queue)
-//    , csc_bat_(0xFF)
     , gui_mode_(eStartup), komoot_view_(0)
     , enable_komoot_switch_(false)
-    , enable_csc_switch_(false)
+    , switched_to_csc_(false)
     , last_distance_bar_(0xFF), last_direction_color_(0)
     , longpress_handled_(false)
-//    , display_brightness_(5)
     , uisettings_(tft, this)
     , led_event_id_(0)
     , ignore_touch_up_(false)
-    , enable_komoot_led_alert_50_(false)
-    , enable_komoot_led_alert_100_(false)
+    , switched_to_komoot_100_(false)
+    , switched_to_komoot_500_(false)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     tft_->setCursor(0, 5);
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
-    //display_led = 0; // enable display led
     display_led.period_ms(1);  
-    //SetUiBrightness(uisettings_.display_brightness_);
     LedOn();
 
     uilog = this;
@@ -59,12 +51,11 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 
 void UIMain::LongPress()
 {
-    INFO("LONGPRESS EVENT\r\n");
+//    INFO("LONGPRESS EVENT\r\n");
     longpress_handled_ = true;
     switch (gui_mode_)
         {
             case eSettings:
-            //SetUiMode(eCsc);    
             uisettings_.LongPress();
             break;
             default:
@@ -87,7 +78,7 @@ void UIMain::TouchUp()
 {
     if (!longpress_handled_) {
         event_queue_.cancel(longpress_id_);
-        INFO("SHORTPRESS UP\r\n");
+//        INFO("SHORTPRESS UP\r\n");
         if (!ignore_touch_up_) {
             switch (gui_mode_)
             {
@@ -99,15 +90,13 @@ void UIMain::TouchUp()
                     SetUiMode(eKomoot);
                 break;
                 case eSettings:
-                    //IncDislayBrightness();
-                    //DrawSettings();
                     uisettings_.ShortPress();
                     break;
             }
         }
     }
     else {
-        INFO("LONGPRESS UP\r\n");
+//        INFO("LONGPRESS UP\r\n");
     }
 }
 
@@ -120,7 +109,11 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
     switch (gui_mode_)
     {
     case eCsc:
-        if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
+        if (!data.is_online) 
+        {
+            DrawOfflineState(Y_CSC_SPEED);
+        }
+        else if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
         {
             INFO("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
             DrawSpeed(Y_CSC_SPEED, data.filtered_speed_kmhX10);
@@ -186,48 +179,43 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     SetOperational();
 
-    if (last_komoot_.distance_m < data.distance_m) {
-        enable_komoot_switch_ = true;
-        enable_csc_switch_ = true;
-        enable_komoot_led_alert_50_ = true;
-        enable_komoot_led_alert_100_ = true;
-    }
-
-    if (enable_komoot_led_alert_50_ && (data.distance_m <= 50)) {
-        LedOn();
-        SetUiMode(eKomoot);
-        enable_komoot_led_alert_50_ = false;
-    }
-    else if (enable_komoot_led_alert_100_ && (data.distance_m <= 100)) {
-        LedOn();
-        SetUiMode(eKomoot);
-        enable_komoot_led_alert_100_ = false;
-    }
-
-    if (enable_komoot_switch_) 
+    if (data.distance_m <= uisettings_.settings_.komoot_alert_dist)
     {
-        if (data.distance_m <= uisettings_.settings_.komoot_alert_dist)
-        {
-            if (gui_mode_ == eCsc) 
-            {
-                LedOn();
-                SetUiMode(eKomoot);
-                enable_komoot_switch_ = false;
-                enable_csc_switch_ = true;
-            }
+        bool switch_to_komoot = false;
+
+        if (!switched_to_komoot_500_) {
+            switched_to_komoot_500_ = true;
+            switch_to_komoot = true;
         }
-    }
 
-    if (enable_csc_switch_)
-    {
-        if (data.distance_m > uisettings_.settings_.komoot_alert_dist) 
+        if (!switched_to_komoot_100_ && (data.distance_m <= 100))
         {
-            if (gui_mode_ == eKomoot) 
-            {
-                SetUiMode(eCsc);
-                enable_csc_switch_ = false;
-                enable_komoot_switch_ = true;
-            }
+            switched_to_komoot_100_ = true;
+            switch_to_komoot = true;
+        }
+
+        if (last_komoot_.direction != data.direction) {
+            switch_to_komoot = true;
+        }
+
+        if (0 != strcmp((const char*)last_komoot_.street, (const char*)data.street)) {
+            switch_to_komoot = true;
+        }
+
+        if (switch_to_komoot)
+        {
+            LedOn();
+            SetUiMode(eKomoot);
+            switched_to_csc_ = false;
+        }
+    } 
+    else 
+    {
+        if (!switched_to_csc_) {
+            switched_to_csc_ = true;
+            SetUiMode(eCsc);
+            switched_to_komoot_500_ = false;
+            switched_to_komoot_100_ = false;
         }
     }
 
@@ -249,7 +237,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         if (force || (last_komoot_.distance_m != data.distance_m))
         {
             DrawKomootDistance(data);
-            DrawKomootDistanceBar(data);
+//            DrawKomootDistanceBar(data);
         }
 
     default:
@@ -317,6 +305,14 @@ void UIMain::SetUiMode(eUiMode_t mode)
     } 
 }
 
+void UIMain::DrawOfflineState(uint16_t y)
+{
+//    tft_->fillRect(0, y, 80, 40, 0);
+    tft_->setFont(&Open_Sans_Condensed_Bold_49);
+    tft_->setTextColor(0xFFFF);
+    tft_->WriteStringLen(0, y, 80, "-", -1, 0, GFX::eCenter);
+}
+
 void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
 {
     char str[10];
@@ -380,7 +376,7 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
 
 void UIMain::DrawKomootStreet(const ISinkKomoot::KomootData_t &data)
 {
-    //tft_->fillRect(0, Y_KOMMOT_STREET, 80, Y_KOMOOT_SPEED-Y_KOMMOT_STREET, 0);
+    tft_->fillRect(0, Y_KOMMOT_STREET, 80, 160-Y_KOMMOT_STREET, 0);
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     char street_ascii[20];
@@ -408,7 +404,7 @@ uint16_t UIMain::GetKomootDistanceBarColor(uint16_t distance_m)
 
 uint16_t UIMain::GetKomootDirectionColor(uint16_t distance_m)
 {
-    uint16_t color = distance_m <= 50u ? Adafruit_ST7735::Color565(255, 0, 0) : 0xFFFF;
+    uint16_t color = distance_m <= 100u ? Adafruit_ST7735::Color565(0, 255, 0) : 0xFFFF;
     return color;
 }
 
@@ -418,7 +414,7 @@ void UIMain::DrawKomootDirection(const ISinkKomoot::KomootData_t &data)
     if (ptr)
     {
         last_direction_color_ = GetKomootDirectionColor(data.distance_m);
-        tft_->drawXBitmap2(17, 0, ptr, 60, 60, last_direction_color_);
+        tft_->drawXBitmap2(10, 0, ptr, 60, 60, last_direction_color_);
     }
 }
 
@@ -454,7 +450,7 @@ void UIMain::UpdateBat(uint8_t val)
 void UIMain::LedOff()
 {
     led_event_id_ = 0;
-    SetUiBrightness(10);
+    SetUiBrightness(uisettings_.settings_.display_brightness_off);
 }
 
 void UIMain::LedOn()
@@ -463,28 +459,10 @@ void UIMain::LedOn()
         event_queue_.cancel(led_event_id_);
     }
     led_event_id_ = event_queue_.call_in(uisettings_.settings_.display_time*1000,  mbed::callback(this, &UIMain::LedOff));
-    SetUiBrightness(uisettings_.settings_.display_brightness);
+    SetUiBrightness(uisettings_.settings_.display_brightness_on);
 }
 
 void UIMain::SetUiBrightness(uint8_t val)
 {
     display_led = (float)val / 10.0f;
 }
-/*
-void UIMain::DrawSettings()
-{
-    char str[10];
-    uint16_t len = sprintf(str, "Bat %i", csc_bat_);
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
-    tft_->setTextColor(0xFFFF);
-    tft_->WriteStringLen(0, 5, 80, str, len, 0, GFX::eCenter);
-
-    len = sprintf(str, "Bri %i", display_brightness_);
-    tft_->WriteStringLen(0, 35, 80, str, len, 0, GFX::eCenter);
-}
-
-void UIMain::IncDislayBrightness()
-{
-    display_brightness_ = (display_brightness_ < 10) ? (display_brightness_ + 1) : 0;
-    display_led = (float)display_brightness_ / 10.0f;
-}*/

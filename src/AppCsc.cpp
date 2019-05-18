@@ -1,6 +1,7 @@
 #include "AppCsc.h"
 #include "ISinkCsc.h"
 #include "tracer.h"
+#include "common.h"
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
@@ -10,15 +11,24 @@
 #define MAX_CADENCE (199u)
 #define MAX_TIME (((99u*3600u)+(99u*60u)+59u) *1000u)
 
-AppCsc::AppCsc(ISinkCsc *sink)
+AppCsc::AppCsc(ISinkCsc *sink, events::EventQueue &event_queue)
     : is_init_(false), sink_(sink), wheel_size_cm_(215.0f), crank_event_sum_(0), crank_counter_sum_(0)
+    , event_queue_(event_queue), last_online_check_ms_(0)
 {
     memset(&data_, 0, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));
+    event_queue.call_every(3000u, mbed::callback(this, &AppCsc::CheckOnline));
 }
 
 AppCsc::~AppCsc()
 {
+}
+
+void AppCsc::CheckOnline()
+{
+    uint32_t now = GetMillis();
+    data_.is_online = (now - last_online_check_ms_) < 3000u;
+    sink_->Update(data_, false);
 }
 
 void AppCsc::UpdateGUI()
@@ -34,6 +44,8 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
     // 03 77 0b 00 00 a5 b9 ad 00 1b fa**** wc=2935, we=47525, cc=173, ce=64027
     if (len == 11)
     {
+        last_online_check_ms_ = GetMillis();
+        data_.is_online = true;
         cscMsg_t msg = {0};
 
         uint8_t p = 0;

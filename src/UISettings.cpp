@@ -33,15 +33,17 @@ UISettings::UISettings(GFX *tft, IUIMode *mode)
     , sm_state_(eBat)
     , edit_mode_(false)
     , setting_sm({
-        {eBat, "Bat", false, NULL, eDim}
-      , {eDim, "Dim", true, &UISettings::IncDislayBrightness, eTime}
+        {eBat, "Bat", false, NULL, eLedOn}
+      , {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff}
+      , {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}
       , {eTime, "Time", true, &UISettings::IncDislayTime, eDist}
       , {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eSave}
       , {eSave, "Save", true, &UISettings::SaveSettings, eExit}
       , {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}
       })
 {
-    settings_.display_brightness = 5;
+    settings_.display_brightness_on = 7;
+    settings_.display_brightness_off = 9;
     settings_.display_time = 10;
     settings_.komoot_alert_dist = 400;
 
@@ -78,7 +80,7 @@ void UISettings::SaveSettings()
             record.file_id = FILE_ID;
             record.key = REC_KEY;
             record.data.p_data = &settings_;
-            record.data.length_words = 1;
+            record.data.length_words = sizeof(settings_) / sizeof(uint32_t);
             err_code = fds_record_update(&record_desc, &record);
             INFO("fds_record_update 0x%x\r\n", err_code);
             err_code = fds_record_close(&record_desc);
@@ -117,7 +119,7 @@ void UISettings::LoadSettings()
         {
             memcpy(&settings_, flash_record.p_data, sizeof(settings_));
             err_code = fds_record_close(&record_desc);
-            INFO("Load settings: dim=%u, time=%u, dist=%u\r\n", settings_.display_brightness, settings_.display_time, settings_.komoot_alert_dist);
+            INFO("Load settings: dispayOn=%u, displayOff=%u, time=%u, dist=%u\r\n", settings_.display_brightness_on, settings_.display_brightness_off , settings_.display_time, settings_.komoot_alert_dist);
             break;
         }
     }
@@ -125,7 +127,7 @@ void UISettings::LoadSettings()
 
 void UISettings::LeaveSettings()
 {
-    sm_state_ = eDim;
+    sm_state_ = eLedOn;
     uimode_->SetUiMode(IUIMode::eCsc);
 }
 
@@ -139,10 +141,16 @@ void UISettings::ShortPress()
     HandleEvent(eShort);
 }
 
-void UISettings::IncDislayBrightness()
+void UISettings::IncBrightnessDisplayOn()
 {
-    settings_.display_brightness = (settings_.display_brightness < 10) ? (settings_.display_brightness + 1) : 0;
-    uimode_->SetUiBrightness(settings_.display_brightness);
+    settings_.display_brightness_on = (settings_.display_brightness_on < 10) ? (settings_.display_brightness_on + 1) : 0;
+    uimode_->SetUiBrightness(settings_.display_brightness_on);
+}
+
+void UISettings::IncBrightnessDisplayOff()
+{
+    settings_.display_brightness_off = (settings_.display_brightness_off < 10) ? (settings_.display_brightness_off + 1) : 0;
+    uimode_->SetUiBrightness(settings_.display_brightness_off);
 }
 
 void UISettings::IncDislayTime()
@@ -169,8 +177,11 @@ void UISettings::Draw()
     case eBat:
         len = sprintf(str, "%i %%", csc_bat_);
         break;
-    case eDim:
-        len = sprintf(str, "%i", settings_.display_brightness);
+    case eLedOn:
+        len = sprintf(str, "%i", settings_.display_brightness_on);
+        break;
+    case eLedOff:
+        len = sprintf(str, "%i", settings_.display_brightness_off);
         break;
     case eTime:
         len = sprintf(str, "%i s", settings_.display_time);
