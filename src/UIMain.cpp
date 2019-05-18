@@ -36,7 +36,8 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     , uisettings_(tft, this)
     , led_event_id_(0)
     , ignore_touch_up_(false)
-    , enable_komoot_led_alert_(false)
+    , enable_komoot_led_alert_50_(false)
+    , enable_komoot_led_alert_100_(false)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -185,15 +186,22 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
 
     SetOperational();
 
-    if (last_komoot_.direction != data.direction) {
+    if (last_komoot_.distance_m < data.distance_m) {
         enable_komoot_switch_ = true;
         enable_csc_switch_ = true;
-        enable_komoot_led_alert_ = true;
+        enable_komoot_led_alert_50_ = true;
+        enable_komoot_led_alert_100_ = true;
     }
 
-    if (enable_komoot_led_alert_ && (data.distance_m <= 100)) {
+    if (enable_komoot_led_alert_50_ && (data.distance_m <= 50)) {
         LedOn();
-        enable_komoot_led_alert_ = false;
+        SetUiMode(eKomoot);
+        enable_komoot_led_alert_50_ = false;
+    }
+    else if (enable_komoot_led_alert_100_ && (data.distance_m <= 100)) {
+        LedOn();
+        SetUiMode(eKomoot);
+        enable_komoot_led_alert_100_ = false;
     }
 
     if (enable_komoot_switch_) 

@@ -11,7 +11,7 @@
 #define MAX_TIME (((99u*3600u)+(99u*60u)+59u) *1000u)
 
 AppCsc::AppCsc(ISinkCsc *sink)
-    : is_init_(false), sink_(sink), wheel_size_cm_(217.0f), crank_event_sum_(0), crank_counter_sum_(0)
+    : is_init_(false), sink_(sink), wheel_size_cm_(215.0f), crank_event_sum_(0), crank_counter_sum_(0)
 {
     memset(&data_, 0, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));

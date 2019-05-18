@@ -60,7 +60,8 @@ public:
   void IncDislayBrightness();
   int led_event_id_;
   bool ignore_touch_up_;
-  bool enable_komoot_led_alert_;
+  bool enable_komoot_led_alert_50_;
+  bool enable_komoot_led_alert_100_;
 
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;

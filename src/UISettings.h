@@ -27,7 +27,7 @@ typedef void (UISettings::*SmFunc)(void);
 typedef struct SmEntry {
     eSmState state;
     const char* name;
-    eSmEvent event;
+    bool editable;
     SmFunc func;
     eSmState next;
 } SmEntry_t;

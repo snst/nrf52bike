@@ -34,13 +34,14 @@ bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
         memcpy(data_.street, &data[9], len - 9);
         data_.street[len - 9] = '\0';
 
+/*
         static uint16_t dist = 650;
         dist-=10;
         data_.distance_m = dist;
         if(dist > 5000) {
             dist = 650;
             data_.direction = 0xFF;
-        }
+        }*/
 
         INFO("komoot: dir=%u, dist=%u, len=%u, street=%s\r\n", data_.direction, data_.distance_m, len - 9, data_.street);
         ret = true;
