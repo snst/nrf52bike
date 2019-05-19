@@ -17,11 +17,19 @@ public:
     uint16_t cadence;
     uint16_t average_cadence;
     bool is_riding;
-    bool is_online;
   } CscData_t;
+
+  typedef enum ConState {
+    eDisconnected,
+    eConnecting,
+    eConnected,
+    eOnline,
+    eOffline    
+  } ConState_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;
   virtual void UpdateBat(uint8_t val) = 0;
+  virtual void UpdateConnState(ConState_t state) = 0;
 };
 
 #endif

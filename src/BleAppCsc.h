@@ -13,8 +13,13 @@ class BleAppCsc : public BleAppBase
     virtual ~BleAppCsc();
     void OnHVX(const GattHVXCallbackParams *params);
     void OnDataRead(const GattReadCallbackParams *params);
+    virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
+    virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
+    virtual bool Connect();
+
   protected:
     AppCsc csc_;
+    ISinkCsc* sink_;
 };
 
 #endif

@@ -21,7 +21,6 @@
 
 #include "tracer.h"
 
-class UIMain;
 
 class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCallback
 {
@@ -36,7 +35,7 @@ class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCal
         return makeFunctionPointer(this, member);
     }
 
-    BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue, UIMain *gui);
+    BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue);
     virtual ~BleManagerBase();
     virtual void OnAppReady(BleAppBase *app);
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
@@ -57,12 +56,10 @@ class BleManagerBase : private mbed::NonCopyable<BleManagerBase>, public IAppCal
     void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event);
     void Start();
     bool IsSameId128(const uint8_t *a, const uint8_t *b);
-    UIMain *Gui();
 
   protected:
     events::EventQueue & event_queue_;
     BLE &ble_;
-    UIMain *gui_;
     bool scanning_active_;
     uint32_t start_scan_ms_;
 };

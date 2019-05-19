@@ -32,6 +32,8 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     , ignore_touch_up_(false)
     , switched_to_komoot_100_(false)
     , switched_to_komoot_500_(false)
+    , csc_conn_state_(eDisconnected)
+    , csc_watchdog_event_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
@@ -106,14 +108,15 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
     FLOW("UIMain::Update(CSC), force=%d\r\n", force);
     SetOperational();
 
+    if (!force && (0 != csc_watchdog_event_id_)) {
+        event_queue_.cancel(csc_watchdog_event_id_);
+        csc_watchdog_event_id_ = event_queue_.call_in(5000u, mbed::callback(this, &UIMain::OnCscWatchdog));
+    }
+
     switch (gui_mode_)
     {
     case eCsc:
-        if (!data.is_online) 
-        {
-            DrawOfflineState(Y_CSC_SPEED);
-        }
-        else if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
+        if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
         {
             INFO("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
             DrawSpeed(Y_CSC_SPEED, data.filtered_speed_kmhX10);
@@ -146,26 +149,6 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
         }
         break;
     case eKomoot:
-    /*
-        if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
-        {
-            INFO("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
-            char str[10] = {0};
-            uint8_t len = sprintf(str, "%i", data.filtered_speed_kmhX10 / 10u);
-            tft_->setFont(&Open_Sans_Condensed_Bold_31);
-            tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-            tft_->WriteStringLen(0, Y_KOMOOT_SPEED, 30, str, len, 2, GFX::eLeft);
-        }
-        if (force || (last_csc_.trip_distance_cm != data.trip_distance_cm))
-        {
-            INFO("Update, eCsc, fdistance: %u\r\n", data.trip_distance_cm);
-            char str[10] = {0};
-            uint8_t len = sprintf(str, "%i", data.trip_distance_cm / 100000u);
-            tft_->setFont(&Open_Sans_Condensed_Bold_31);
-            tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-            tft_->WriteStringLen(30, Y_KOMOOT_TRIP_DISTANCE, 50, str, len, 2, GFX::eRight);
-        }
-        */
     default:
         break;
     }
@@ -296,7 +279,6 @@ void UIMain::SetUiMode(eUiMode_t mode)
                 Update(last_csc_, true);
             break;
             case eSettings:
-                //DrawSettings();
                 uisettings_.Draw();
                 break;
             default:
@@ -305,12 +287,34 @@ void UIMain::SetUiMode(eUiMode_t mode)
     } 
 }
 
-void UIMain::DrawOfflineState(uint16_t y)
+void UIMain::DrawCscConnState()
 {
-//    tft_->fillRect(0, y, 80, 40, 0);
-    tft_->setFont(&Open_Sans_Condensed_Bold_49);
-    tft_->setTextColor(0xFFFF);
-    tft_->WriteStringLen(0, y, 80, "-", -1, 0, GFX::eCenter);
+    if (gui_mode_ == eCsc) {
+        const char* str = NULL;
+        switch (csc_conn_state_) {
+            case eOffline:
+            str = "off";
+            break;
+            case eDisconnected:
+            str = "dis";
+            break;
+            case eConnecting:
+            str = "c..";
+            break;
+            case eConnected:
+            str = "con";
+            break;
+            default:
+            break;
+        }
+
+        if (NULL != str) {
+    //    tft_->fillRect(0, y, 80, 40, 0);
+            tft_->setFont(&Open_Sans_Condensed_Bold_31);
+            tft_->setTextColor(0xFFFF);
+            tft_->WriteStringLen(0, 0, 80, str, -1, 0, GFX::eCenter);
+        }
+    }
 }
 
 void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
@@ -443,7 +447,6 @@ void UIMain::DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data)
 
 void UIMain::UpdateBat(uint8_t val)
 {
-    //csc_bat_ = val;
     uisettings_.UpdateBat(val);
 }
 
@@ -465,4 +468,15 @@ void UIMain::LedOn()
 void UIMain::SetUiBrightness(uint8_t val)
 {
     display_led = (float)val / 10.0f;
+}
+
+void UIMain::UpdateConnState(ConState_t state)
+{
+    csc_conn_state_ = state;
+    event_queue_.call(mbed::callback(this, &UIMain::DrawCscConnState));
+}
+
+void UIMain::OnCscWatchdog()
+{
+    UpdateConnState(ISinkCsc::eOffline);
 }

@@ -31,10 +31,10 @@ public:
   virtual ~BleAppBase();
   bool HaveFoundDevice();
   const Gap::Handle_t &GetConnectionHandle();
-  bool Connect();
+  virtual bool Connect();
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
   bool IsConnected();
-  void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
+  virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
   virtual void OnServiceFound(const DiscoveredService *service);
   virtual void OnServiceCharacteristicFound(const DiscoveredCharacteristic *param);
   virtual void OnServiceDiscoveryFinished(Gap::Handle_t handle);

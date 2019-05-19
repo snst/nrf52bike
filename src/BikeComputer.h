@@ -5,6 +5,8 @@
 #include "BleAppCsc.h"
 #include "BleAppKomoot.h"
 
+class UIMain;
+
 class BikeComputer : public BleManagerBase
 {
 public:

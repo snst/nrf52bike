@@ -12,11 +12,6 @@ BleAppKomoot::~BleAppKomoot()
 {
 }
 
-void BleAppKomoot::UpdateGUI()
-{
-    sink_->Update(data_, false);
-}
-
 bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
 {
     bool ret = false;
@@ -55,7 +50,7 @@ void BleAppKomoot::OnHVX(const GattHVXCallbackParams *params)
     {
         if (ProcessData(params->data, params->len))
         {
-            event_queue_.call(mbed::callback(this, &BleAppKomoot::UpdateGUI));
+            sink_->Update(data_, false);
         }
     }
 }

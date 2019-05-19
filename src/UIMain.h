@@ -20,6 +20,7 @@ public:
   virtual void Update(const ISinkKomoot::KomootData_t &data, bool force);
   virtual void UpdateBat(uint8_t val);
   virtual void Log(const char *str);
+  virtual void UpdateConnState(ConState_t state);
   void SetOperational();
   void SetUiMode(eUiMode_t mode);
   void TouchDown();
@@ -34,7 +35,7 @@ public:
 
   eUiMode_t gui_mode_;
   
-  void DrawOfflineState(uint16_t y);
+  void DrawCscConnState();
   void DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color = 0xFFFF);
   void DrawCadence(uint16_t x, uint16_t y, uint16_t cadence);
   void DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color = 0xFFFF);
@@ -66,6 +67,9 @@ public:
   ISinkCsc::CscData_t last_csc_;
   ISinkKomoot::KomootData_t last_komoot_;
   UISettings uisettings_;
+  ConState_t csc_conn_state_;
+  int csc_watchdog_event_id_;
+  void OnCscWatchdog();
 };
 
 #endif

@@ -1,10 +1,9 @@
 #include "BleManagerBase.h"
-#include "UIMain.h"
 #include "common.h"
 
 
-BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue, UIMain *gui) 
-: ble_(ble_interface), event_queue_(event_queue), gui_(gui), scanning_active_(false)
+BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue) 
+: ble_(ble_interface), event_queue_(event_queue), scanning_active_(false)
 {
 }
 
@@ -108,6 +107,7 @@ void BleManagerBase::StartScan(uint32_t timeout)
     {
         start_scan_ms_ = GetMillis();
         scanning_active_ = true;
+        ble_.gap().setTxPower(4);
         ble_.gap().setScanParams(400, 400, 0, true);
         ble_.gap().startScan(this, &BleManagerBase::OnAdvertisement);
         /*    if (timeout > 0)
@@ -186,9 +186,4 @@ bool BleManagerBase::IsSameId128(const uint8_t *a, const uint8_t *b)
         }
     }
     return true;
-}
-
-UIMain *BleManagerBase::Gui()
-{
-    return gui_;
 }
