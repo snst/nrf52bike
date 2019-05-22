@@ -103,8 +103,8 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
                 trip_time_ms += delta_ms;
             }
             data_.trip_time_ms = MIN(trip_time_ms, MAX_TIME);
-
-            INFO("now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n\r\n", now_ms, delta_ms, data_.speed_kmhX10 / 10.0f, (uint16_t)data_.cadence, data_.trip_time_ms / 1000);
+            static uint8_t k=0;
+            INFO("[%i]now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n", k++, now_ms, delta_ms, data_.speed_kmhX10 / 10.0f, (uint16_t)data_.cadence, data_.trip_time_ms / 1000);
 
             uint32_t trip_distance_cm = (uint32_t)(wheel_size_cm_ * data_.total_wheel_rounds);
             data_.trip_distance_cm = MIN(trip_distance_cm, MAX_DISTANCE);

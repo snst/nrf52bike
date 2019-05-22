@@ -4,6 +4,7 @@
 #include "BleManagerBase.h"
 #include "BleAppCsc.h"
 #include "BleAppKomoot.h"
+#include <vector>
 
 class UIMain;
 
@@ -26,8 +27,11 @@ public:
   virtual void OnScanStopped();
   virtual void OnAppReady(BleAppBase *app);
   BleAppBase* GetAppWithConnectionHandle(Gap::Handle_t handle);
+  void RegisterApp(BleAppBase* app);
   void CheckScanStop();
   void ConnectDevices();
+  std::vector<BleAppBase*> apps_;
+  void ConnectApp(BleAppBase* app);
 };
 
 #endif

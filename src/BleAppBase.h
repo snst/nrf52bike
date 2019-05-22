@@ -43,6 +43,7 @@ public:
   virtual void OnAppReady();
   virtual void OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params);
   virtual void StartCharacteristicDescriptorsDiscovery(DiscoveredCharacteristic &characteristic);
+  virtual void OnAllServiceAndCharFound();
   virtual void RequestNotify();
   void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc);
   virtual void OnDataRead(const GattReadCallbackParams *params);
@@ -56,6 +57,7 @@ public:
   DiscoveredCharacteristic &GetCharacteristic();
   void SetAppCallback(IAppCallback* cb);
   bool RequestBatteryLevel();
+  const char* getName();
     
   template <typename ContextType>
   FunctionPointerWithContext<ContextType> as_cb(void (Self::*member)(ContextType context))
@@ -82,6 +84,7 @@ protected:
   bool found_device_;
   IAppCallback* app_callback_;
   char name_[MAX_NAME+1];
+  bool bat_requested_;
 };
 
 #endif

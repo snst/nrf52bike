@@ -11,6 +11,8 @@ typedef enum eSmState {
     eLedOff,
     eTime,
     eDist,
+    eAutoSwitch,
+    eLightUp,
     eSave,
     eExit,
 } eSmState_t;
@@ -44,6 +46,8 @@ class UISettings
     void IncBrightnessDisplayOff();
     void IncDislayTime();
     void IncKomootAlertDist();
+    void IncAutoSwitch();
+    void IncLightUp();
     void SaveSettings();
     void LoadSettings();
     void Draw();
@@ -58,14 +62,16 @@ class UISettings
     eSmState_t sm_state_;
     bool edit_mode_;
 
-    SmEntry setting_sm[7];
+    SmEntry setting_sm[9];
 
     typedef struct SettingsData {
         uint16_t komoot_alert_dist;
         uint8_t display_brightness_on;
         uint8_t display_brightness_off;
         uint8_t display_time;
-        uint8_t pad[3];
+        uint8_t auto_switch;
+        uint8_t light_up;
+        uint8_t pad;
     } SettingsData_t;
 
     SettingsData_t settings_;

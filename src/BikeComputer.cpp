@@ -8,44 +8,36 @@ const uint8_t GAT_SERVICE_KOMOOT[] = {0x71, 0xC1, 0xE1, 0x28, 0xD9, 0x2F, 0x4F, 
 BikeComputer::BikeComputer(BLE &ble_interface, events::EventQueue& event_queue, UIMain *ui)
     : BleManagerBase(ble_interface, event_queue), csc_app(event_queue_, ble_interface, ui), komoot_app(event_queue_, ble_interface, ui)
 {
-    csc_app.SetAppCallback(this);
-    komoot_app.SetAppCallback(this);
+    RegisterApp(&csc_app);
+    RegisterApp(&komoot_app);
 }
 
 BikeComputer::~BikeComputer() {}
 
 void BikeComputer::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
-    //BleManagerBase::OnConnected(params);
-    FLOW("~BikeComputer::OnConnected()\r\n");
-    if (csc_app.HasAddress(params->peerAddr))
-    {
-        /*Gap::ConnectionParams_t new_params;
-        new_params.minConnectionInterval = 1000;
-        new_params.maxConnectionInterval = 1200;
-        new_params.slaveLatency = 0;
-        new_params.connectionSupervisionTimeout = 500;
-        ble_error_t ret = ble_.gap().updateConnectionParams(params->handle, &new_params);
-        INFO("UPDATE: 0x%x\r\n", ret);*/
-        csc_app.OnConnected(params);
-    }
-    else if (komoot_app.HasAddress(params->peerAddr))
-    {
-        komoot_app.OnConnected(params);
+    INFO("~BikeComputer::OnConnected()\r\n");
+
+    for (std::vector<BleAppBase*>::iterator it = apps_.begin() ; it != apps_.end(); ++it)     
+    {    
+        INFO("check: %s\r\n", (*it)->getName());
+        
+        if ((*it)->HasAddress(params->peerAddr)) {
+            INFO("~BikeComputer::OnConnected(%s)\r\n", (*it)->getName());
+            (*it)->OnConnected(params);
+            break;
+        }
     }
 }
 
 void BikeComputer::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params)
 {
-    BleManagerBase::OnDisconnected(params);
-    FLOW("~BikeComputer::OnDisconnected()\r\n");
-    if (params->handle == csc_app.GetConnectionHandle())
-    {
-        csc_app.OnDisconnected(params);
-    }
-    else if (params->handle == komoot_app.GetConnectionHandle())
-    {
-        komoot_app.OnDisconnected(params);
+//    BleManagerBase::OnDisconnected(params);
+    BleAppBase * app = GetAppWithConnectionHandle(params->handle);
+    if (NULL != app) {
+        FLOW("~BikeComputer::OnDisconnected(%s)\r\n", app->getName());
+        app->OnDisconnected(params);
+        ConnectApp(app);
     }
 }
 
@@ -63,16 +55,14 @@ void BikeComputer::OnDataRead(const GattReadCallbackParams *params)
 
 BleAppBase *BikeComputer::GetAppWithConnectionHandle(Gap::Handle_t handle)
 {
-    BleAppBase *ret = NULL;
-    if (handle == csc_app.GetConnectionHandle())
-    {
-        ret = &csc_app;
+    for (std::vector<BleAppBase*>::iterator it = apps_.begin() ; it != apps_.end(); ++it)     
+        {         
+        if (handle == (*it)->GetConnectionHandle())
+        {
+            return (*it);
+        }
     }
-    else if (handle == komoot_app.GetConnectionHandle())
-    {
-        ret = &komoot_app;
-    }
-    return ret;
+    return NULL;
 }
 
 void BikeComputer::OnHVX(const GattHVXCallbackParams *params)
@@ -105,6 +95,7 @@ void BikeComputer::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbac
         if(!csc_app.HaveFoundDevice())
         {
             UILog("CSC\n");
+            ConnectApp(&csc_app);
         }
         csc_app.SetDeviceAddress(params);
         CheckScanStop();
@@ -120,6 +111,7 @@ void BikeComputer::OnFoundService128(const uint8_t *id, const Gap::Advertisement
         if(!komoot_app.HaveFoundDevice())
         {
             UILog("Komoot\n");
+            ConnectApp(&komoot_app);
         }
         komoot_app.SetDeviceAddress(params);
         CheckScanStop();
@@ -148,6 +140,7 @@ void BikeComputer::CheckScanStop()
 
 void BikeComputer::ConnectDevices()
 {
+    /*
     if (csc_app.HaveFoundDevice() && !csc_app.IsConnected())
     {
         csc_app.Connect();
@@ -155,16 +148,36 @@ void BikeComputer::ConnectDevices()
     else if (komoot_app.HaveFoundDevice() && !komoot_app.IsConnected())
     {
         komoot_app.Connect();
-    }
+    }*/
 }
 
 void BikeComputer::OnScanStopped()
 {
     INFO("~BikeComputer::OnScanStopped()\r\n");
-    event_queue_.call_every(1000, mbed::callback(this, &BikeComputer::ConnectDevices));
+    //event_queue_.call_every(5000, mbed::callback(this, &BikeComputer::ConnectDevices));
+/*
+    if (csc_app.HaveFoundDevice())
+        app_connect_queue_.push_back(&csc_app);
+
+    if (komoot_app.HaveFoundDevice())
+        app_connect_queue_.push_back(&komoot_app);
+*/
 }
 
 void BikeComputer::OnAppReady(BleAppBase *app)
 {
     INFO("~BikeComputer::OnAppReady() app=%p\r\n", app);
+}
+
+void BikeComputer::ConnectApp(BleAppBase* app)
+{
+    //app_connect_queue_.push_back(app);
+    INFO("BikeComputer::ConnectApp(%s)\t\n", app->getName());
+    event_queue_.call_in(500, mbed::callback(app, &BleAppBase::Connect));
+}
+
+void BikeComputer::RegisterApp(BleAppBase* app)
+{
+    apps_.push_back(app);
+    app->SetAppCallback(this);
 }

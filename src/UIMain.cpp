@@ -81,7 +81,7 @@ void UIMain::TouchUp()
     if (!longpress_handled_) {
         event_queue_.cancel(longpress_id_);
 //        INFO("SHORTPRESS UP\r\n");
-        if (!ignore_touch_up_) {
+        if (!uisettings_.settings_.light_up || !ignore_touch_up_) {
             switch (gui_mode_)
             {
                 default:
@@ -188,17 +188,23 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         if (switch_to_komoot)
         {
             LedOn();
-            SetUiMode(eKomoot);
             switched_to_csc_ = false;
+
+            if (uisettings_.settings_.auto_switch) {
+                SetUiMode(eKomoot);
+            }
         }
     } 
     else 
     {
-        if (!switched_to_csc_) {
+        if (!switched_to_csc_) 
+        {
             switched_to_csc_ = true;
-            SetUiMode(eCsc);
             switched_to_komoot_500_ = false;
             switched_to_komoot_100_ = false;
+            if (uisettings_.settings_.auto_switch) {
+                SetUiMode(eCsc);
+            }
         }
     }
 
@@ -299,20 +305,22 @@ void UIMain::DrawCscConnState()
             str = "dis";
             break;
             case eConnecting:
-            str = "c..";
+            str = "c.ing";
             break;
             case eConnected:
-            str = "con";
+            str = "c.ted";
+            last_csc_.filtered_speed_kmhX10 = 0xFFFF;
+            //Update(last_csc_, true);
             break;
             default:
             break;
         }
 
         if (NULL != str) {
-    //    tft_->fillRect(0, y, 80, 40, 0);
+            tft_->fillRect(0, 0, 80, 40, 0);
             tft_->setFont(&Open_Sans_Condensed_Bold_31);
             tft_->setTextColor(0xFFFF);
-            tft_->WriteStringLen(0, 0, 80, str, -1, 0, GFX::eCenter);
+            tft_->WriteStringLen(0, 5, 80, str, -1, 0, GFX::eCenter);
         }
     }
 }

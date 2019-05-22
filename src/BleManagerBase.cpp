@@ -44,12 +44,12 @@ void BleManagerBase::OnDataRead(const GattReadCallbackParams *params)
 
 void BleManagerBase::OnHVX(const GattHVXCallbackParams *params)
 {
-    INFO("~BleManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
+    FLOW("~BleManagerBase::OnHVX(): handle %u; type %s, ", params->handle, (params->type == BLE_HVX_NOTIFICATION) ? "notification" : "indication");
     for (unsigned index = 0; index < params->len; index++)
     {
-        INFO(" %02x", params->data[index]);
+        FLOW(" %02x", params->data[index]);
     }
-    INFO("\r\n");
+    FLOW("\r\n");
 }
 
 void BleManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)

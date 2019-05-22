@@ -37,7 +37,9 @@ UISettings::UISettings(GFX *tft, IUIMode *mode)
       , {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff}
       , {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}
       , {eTime, "Time", true, &UISettings::IncDislayTime, eDist}
-      , {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eSave}
+      , {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eAutoSwitch}
+      , {eAutoSwitch, "Switch", true, &UISettings::IncAutoSwitch, eLightUp}
+      , {eLightUp, "Light", true, &UISettings::IncLightUp, eSave}
       , {eSave, "Save", true, &UISettings::SaveSettings, eExit}
       , {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}
       })
@@ -141,6 +143,16 @@ void UISettings::ShortPress()
     HandleEvent(eShort);
 }
 
+void UISettings::IncAutoSwitch()
+{
+    settings_.auto_switch = settings_.auto_switch ? 0 : 1;
+}
+
+void UISettings::IncLightUp()
+{
+    settings_.light_up = settings_.light_up ? 0 : 1;
+}
+
 void UISettings::IncBrightnessDisplayOn()
 {
     settings_.display_brightness_on = (settings_.display_brightness_on < 10) ? (settings_.display_brightness_on + 1) : 0;
@@ -188,6 +200,12 @@ void UISettings::Draw()
         break;
     case eDist:
         len = sprintf(str, "%i m", settings_.komoot_alert_dist);
+        break;
+    case eAutoSwitch:
+        len = sprintf(str, "%s", settings_.auto_switch ? "on" : "off");
+        break;
+    case eLightUp:
+        len = sprintf(str, "%s", settings_.light_up ? "on" : "off");
         break;
     default:
         len = 0;
