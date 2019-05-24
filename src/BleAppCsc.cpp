@@ -1,13 +1,13 @@
 #include "BleAppCsc.h"
-#include "ISinkCsc.h"
+#include "IUICsc.h"
 #include "common.h"
 
 #define FLAG_WHEEL_PRESENT (1)
 #define FLAG_CRANK_PRESENT (2)
 
-BleAppCsc::BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, ISinkCsc* sink)
-    : BleAppBase(event_queue, ble_interface, "CSC")
-    , sink_(sink)
+BleAppCsc::BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, IUICsc* ui)
+    : BleAppBase(event_queue, ble_interface, "CSC", BC::eCsc)
+    , ui_(ui)
 {
     FindCharacteristic(0x2A5B);
 }
@@ -21,8 +21,8 @@ void BleAppCsc::OnHVX(const GattHVXCallbackParams *params)
     if (params->type == BLE_HVX_NOTIFICATION)
     {
         if(csc_.ProcessData(GetMillis(), params->data, params->len)) {
-            sink_->UpdateConnState(ISinkCsc::eOnline);
-            sink_->Update(csc_.data_, false);
+            ui_->UpdateCscConnState(IUICsc::eOnline);
+            ui_->Update(csc_.data_, false);
         }
     }
 }
@@ -35,25 +35,25 @@ void BleAppCsc::OnDataRead(const GattReadCallbackParams *params)
         char str[15];
         sprintf(str, "\n\nBattery: %d\n", params->data[0]);
         UILog(str);
-        sink_->UpdateBat(params->data[0]);
+        ui_->UpdateCscBat(params->data[0]);
     }
 }
 
 void BleAppCsc::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
     BleAppBase::OnConnected(params);
-    sink_->UpdateConnState(ISinkCsc::eConnected);
+    ui_->UpdateCscConnState(IUICsc::eConnected);
 
 }
 
 void BleAppCsc::OnDisconnected(const Gap::DisconnectionCallbackParams_t *params)
 {
     BleAppBase::OnDisconnected(params);
-    sink_->UpdateConnState(ISinkCsc::eDisconnected);
+    ui_->UpdateCscConnState(IUICsc::eDisconnected);
 }
 
 bool BleAppCsc::Connect()
 {
     BleAppBase::Connect();
-    sink_->UpdateConnState(ISinkCsc::eConnecting);
+    ui_->UpdateCscConnState(IUICsc::eConnecting);
 }

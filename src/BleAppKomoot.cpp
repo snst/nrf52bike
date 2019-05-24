@@ -1,7 +1,7 @@
 #include "BleAppKomoot.h"
 
-BleAppKomoot::BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, ISinkKomoot *sink)
-    : BleAppBase(event_queue, ble_interface, "Komoot"), sink_(sink)
+BleAppKomoot::BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, IUIKomoot *ui)
+    : BleAppBase(event_queue, ble_interface, "Komoot", BC::eKomoot), ui_(ui)
 {
     FindCharacteristic(0xd605);
     memset(&data_, 0xFF, sizeof(data_));
@@ -50,7 +50,7 @@ void BleAppKomoot::OnHVX(const GattHVXCallbackParams *params)
     {
         if (ProcessData(params->data, params->len))
         {
-            sink_->Update(data_, false);
+            ui_->Update(data_, false);
         }
     }
 }

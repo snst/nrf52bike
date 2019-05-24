@@ -1,11 +1,11 @@
-#ifndef IKOMOOT_GUI_H_
-#define IKOMOOT_GUI_H_
+#ifndef IUI_KOMOOT_H_
+#define IUI_KOMOOT_H_
 
 #include "mbed.h"
 
 #define MAX_KOMOOT_STREET_LEN (32u)
 
-class ISinkKomoot
+class IUIKomoot
 {
 public:
   typedef struct KomootData {

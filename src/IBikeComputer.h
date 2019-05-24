@@ -2,12 +2,15 @@
 #define IBIKECOMPUTER_H_
 
 #include <mbed.h>
+#include "AppId.h"
+#include "IUIMode.h"
 
 class IBikeComputer
 {
 public:
-  virtual void ConnectCsc() = 0;
-  virtual void ConnectKomoot() = 0;
+  virtual void Connect(BC::eApp_t app) = 0;
+  virtual void SetUiMode(IUIMode::eUiMode_t mode) = 0;
+  virtual void SetBacklightBrightness(uint8_t val) = 0;
 };
 
 #endif

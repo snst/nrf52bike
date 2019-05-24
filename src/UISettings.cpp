@@ -5,10 +5,10 @@
 #include "common.h"
 #include "fds.h"
 #include "tracer.h"
+#include "IBikeComputer.h"
 
 #define FILE_ID 0x1111
 #define REC_KEY 0x2222
-
 
 static void fds_evt_handler(fds_evt_t const *const p_fds_evt)
 {
@@ -28,21 +28,8 @@ static void fds_evt_handler(fds_evt_t const *const p_fds_evt)
     }
 }
 
-UISettings::UISettings(GFX *tft, IUIMode *mode)
-    : uimode_(mode), tft_(tft)
-    , sm_state_(eBat)
-    , edit_mode_(false)
-    , setting_sm({
-        {eBat, "Bat", false, NULL, eLedOn}
-      , {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff}
-      , {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}
-      , {eTime, "Time", true, &UISettings::IncDislayTime, eDist}
-      , {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eAutoSwitch}
-      , {eAutoSwitch, "Switch", true, &UISettings::IncAutoSwitch, eLightUp}
-      , {eLightUp, "Light", true, &UISettings::IncLightUp, eSave}
-      , {eSave, "Save", true, &UISettings::SaveSettings, eExit}
-      , {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}
-      })
+UISettings::UISettings(GFX *tft)
+    : tft_(tft), sm_state_(eBat), edit_mode_(false), setting_sm({{eBat, "Bat", false, NULL, eLedOn}, {eLedOn, "SetBacklightOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff}, {eLedOff, "SetBacklightOff", true, &UISettings::IncBrightnessDisplayOff, eTime}, {eTime, "Time", true, &UISettings::IncDislayTime, eDist}, {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eAutoSwitch}, {eAutoSwitch, "Switch", true, &UISettings::IncAutoSwitch, eLightUp}, {eLightUp, "Light", true, &UISettings::IncLightUp, eConnect}, {eConnect, "Conn", true, &UISettings::Connect, eSave}, {eSave, "Save", true, &UISettings::SaveSettings, eExit}, {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}})
 {
     settings_.display_brightness_on = 7;
     settings_.display_brightness_off = 9;
@@ -93,8 +80,8 @@ void UISettings::SaveSettings()
 
     if (!found)
     {
-        fds_record_t        record;
-        fds_record_desc_t   record_desc2 = {0};
+        fds_record_t record;
+        fds_record_desc_t record_desc2 = {0};
         record.file_id = FILE_ID;
         record.key = REC_KEY;
         record.data.p_data = &settings_;
@@ -121,7 +108,7 @@ void UISettings::LoadSettings()
         {
             memcpy(&settings_, flash_record.p_data, sizeof(settings_));
             err_code = fds_record_close(&record_desc);
-            INFO("Load settings: dispayOn=%u, displayOff=%u, time=%u, dist=%u\r\n", settings_.display_brightness_on, settings_.display_brightness_off , settings_.display_time, settings_.komoot_alert_dist);
+            INFO("Load settings: dispayOn=%u, displayOff=%u, time=%u, dist=%u\r\n", settings_.display_brightness_on, settings_.display_brightness_off, settings_.display_time, settings_.komoot_alert_dist);
             break;
         }
     }
@@ -130,7 +117,7 @@ void UISettings::LoadSettings()
 void UISettings::LeaveSettings()
 {
     sm_state_ = eLedOn;
-    uimode_->SetUiMode(IUIMode::eCsc);
+    bike_computer_->SetUiMode(IUIMode::eCsc);
 }
 
 void UISettings::LongPress()
@@ -156,13 +143,13 @@ void UISettings::IncLightUp()
 void UISettings::IncBrightnessDisplayOn()
 {
     settings_.display_brightness_on = (settings_.display_brightness_on < 10) ? (settings_.display_brightness_on + 1) : 0;
-    uimode_->SetUiBrightness(settings_.display_brightness_on);
+    bike_computer_->SetBacklightBrightness(settings_.display_brightness_on);
 }
 
 void UISettings::IncBrightnessDisplayOff()
 {
     settings_.display_brightness_off = (settings_.display_brightness_off < 10) ? (settings_.display_brightness_off + 1) : 0;
-    uimode_->SetUiBrightness(settings_.display_brightness_off);
+    bike_computer_->SetBacklightBrightness(settings_.display_brightness_off);
 }
 
 void UISettings::IncDislayTime()
@@ -173,6 +160,12 @@ void UISettings::IncDislayTime()
 void UISettings::IncKomootAlertDist()
 {
     settings_.komoot_alert_dist = (settings_.komoot_alert_dist < 500) ? (settings_.komoot_alert_dist + 50) : 50;
+}
+
+void UISettings::Connect()
+{
+    bike_computer_->Connect(BC::eCsc);
+    bike_computer_->Connect(BC::eKomoot);
 }
 
 void UISettings::Draw()
@@ -219,7 +212,7 @@ void UISettings::Draw()
     }
 }
 
-void UISettings::UpdateBat(uint8_t val)
+void UISettings::UpdateCscBat(uint8_t val)
 {
     csc_bat_ = val;
 }
@@ -228,11 +221,12 @@ void UISettings::HandleEvent(eSmEvent ev)
 {
     SmEntry_t *entry = GetStateEntry(sm_state_);
 
-    if (NULL != entry) 
+    if (NULL != entry)
     {
         if (ev == eLong)
         {
-            if (entry->editable) {
+            if (entry->editable)
+            {
                 edit_mode_ = !edit_mode_;
                 Draw();
             }
@@ -268,4 +262,9 @@ SmEntry_t *UISettings::GetStateEntry(eSmState state)
         }
     }
     return ret;
+}
+
+void UISettings::SetBikeComputer(IBikeComputer *bike_computer)
+{
+    bike_computer_ = bike_computer;
 }

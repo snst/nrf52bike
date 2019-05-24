@@ -1,27 +1,13 @@
 #include "BleManagerBase.h"
 #include "common.h"
 
-
-BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue& event_queue) 
-: ble_(ble_interface), event_queue_(event_queue), scanning_active_(false)
+BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue &event_queue)
+    : ble_(ble_interface), event_queue_(event_queue), scanning_active_(false)
 {
 }
 
-BleManagerBase::~BleManagerBase()
-{
-}
+BleManagerBase::~BleManagerBase() {}
 
-void BleManagerBase::OnAppReady(BleAppBase *app)
-{
-    INFO("~BleManagerBase::OnAppReady() app=%p\r\n", app);
-}
-/*
-void Connect(BLEProtocol::AddressBytes_t &device_addr, BLEProtocol::AddressType_t &device_addr_type)
-{
-    INFO("~BleManagerBase::Connect()\r\n");
-    ble_.gap().connect(device_addr, device_addr_type, NULL, NULL);
-}
-*/
 void BleManagerBase::OnConnected(const Gap::ConnectionCallbackParams_t *params)
 {
     FLOW("~BleManagerBase::OnConnected() handle=0x%x\r\n", params->handle);
@@ -52,13 +38,9 @@ void BleManagerBase::OnHVX(const GattHVXCallbackParams *params)
     FLOW("\r\n");
 }
 
-void BleManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params)
-{
-}
+void BleManagerBase::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params) {}
 
-void BleManagerBase::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params)
-{
-}
+void BleManagerBase::OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params) {}
 
 void BleManagerBase::OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params)
 {
@@ -95,11 +77,6 @@ void BleManagerBase::OnAdvertisement(const Gap::AdvertisementCallbackParams_t *p
     }
 }
 
-bool BleManagerBase::IsScanActive()
-{
-    return scanning_active_;
-}
-
 void BleManagerBase::StartScan(uint32_t timeout)
 {
     INFO("~BleManagerBase::StartScan(), timeout=%u, active=%d\r\n", timeout, scanning_active_);
@@ -129,13 +106,7 @@ void BleManagerBase::StopScan()
     {
         scanning_active_ = false;
         ble_.stopScan();
-        event_queue_.call_in(100, mbed::callback(this, &BleManagerBase::OnScanStopped));
     }
-}
-
-void BleManagerBase::OnScanStopped()
-{
-    INFO("~BleManagerBase::OnScanStopped()\r\n");
 }
 
 void BleManagerBase::OnInitDone()

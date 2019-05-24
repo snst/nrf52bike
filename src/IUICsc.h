@@ -1,9 +1,9 @@
-#ifndef ICSC_GUI_H_
-#define ICSC_GUI_H_
+#ifndef IUI_CSC_H_
+#define IUI_CSC_H_
 
 #include "mbed.h"
 
-class ISinkCsc
+class IUICsc
 {
 public:
   typedef struct CscData {
@@ -28,8 +28,8 @@ public:
   } ConState_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;
-  virtual void UpdateBat(uint8_t val) = 0;
-  virtual void UpdateConnState(ConState_t state) = 0;
+  virtual void UpdateCscBat(uint8_t val) = 0;
+  virtual void UpdateCscConnState(ConState_t state) = 0;
 };
 
 #endif

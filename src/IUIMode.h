@@ -12,8 +12,6 @@ class IUIMode
         eKomoot,
         eSettings
     };
-    virtual void SetUiMode(IUIMode::eUiMode_t mode) = 0;
-    virtual void SetUiBrightness(uint8_t val) = 0;
 };
 
 #endif

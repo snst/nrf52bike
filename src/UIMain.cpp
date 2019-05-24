@@ -21,27 +21,15 @@ IUILog *uilog = NULL;
 PwmOut display_led((PinName)11);
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
-    : tft_(tft), event_queue_(event_queue)
-    , gui_mode_(eStartup), komoot_view_(0)
-    , enable_komoot_switch_(false)
-    , switched_to_csc_(false)
-    , last_distance_bar_(0xFF), last_direction_color_(0)
-    , longpress_handled_(false)
-    , uisettings_(tft, this)
-    , led_event_id_(0)
-    , ignore_touch_up_(false)
-    , switched_to_komoot_100_(false)
-    , switched_to_komoot_500_(false)
-    , csc_conn_state_(eDisconnected)
-    , csc_watchdog_event_id_(0)
+    : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup), komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false), last_distance_bar_(0xFF), last_direction_color_(0), longpress_handled_(false), uisettings_(tft), led_event_id_(0), ignore_touch_up_(false), switched_to_komoot_100_(false), switched_to_komoot_500_(false), csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     tft_->setCursor(0, 5);
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
-    display_led.period_ms(1);  
-    LedOn();
+    display_led.period_ms(1);
+    SetBacklightOn();
 
     uilog = this;
     memset(&last_csc_, 0, sizeof(last_csc_));
@@ -50,20 +38,19 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 
 #define LONGPRESS_MS (1000u)
 
-
 void UIMain::LongPress()
 {
-//    INFO("LONGPRESS EVENT\r\n");
+    //    INFO("LONGPRESS EVENT\r\n");
     longpress_handled_ = true;
     switch (gui_mode_)
-        {
-            case eSettings:
-            uisettings_.LongPress();
-            break;
-            default:
-            SetUiMode(eSettings);    
-            break;
-        }
+    {
+    case IUIMode::eSettings:
+        uisettings_.LongPress();
+        break;
+    default:
+        SetUiMode(IUIMode::eSettings);
+        break;
+    }
 }
 
 void UIMain::TouchDown()
@@ -73,49 +60,52 @@ void UIMain::TouchDown()
     touch_down_ms_ = GetMillis();
     longpress_id_ = event_queue_.call_in(500, mbed::callback(this, &UIMain::LongPress));
     longpress_handled_ = false;
-    LedOn();
+    SetBacklightOn();
 }
 
 void UIMain::TouchUp()
 {
-    if (!longpress_handled_) {
+    if (!longpress_handled_)
+    {
         event_queue_.cancel(longpress_id_);
-//        INFO("SHORTPRESS UP\r\n");
-        if (!uisettings_.settings_.light_up || !ignore_touch_up_) {
+        //        INFO("SHORTPRESS UP\r\n");
+        if (!uisettings_.settings_.light_up || !ignore_touch_up_)
+        {
             switch (gui_mode_)
             {
-                default:
-                case eKomoot:
-                    SetUiMode(eCsc);
+            default:
+            case IUIMode::eKomoot:
+                SetUiMode(IUIMode::eCsc);
                 break;
-                case eCsc:
-                    SetUiMode(eKomoot);
+            case IUIMode::eCsc:
+                SetUiMode(IUIMode::eKomoot);
                 break;
-                case eSettings:
-                    uisettings_.ShortPress();
-                    break;
+            case IUIMode::eSettings:
+                uisettings_.ShortPress();
+                break;
             }
         }
     }
-    else {
-//        INFO("LONGPRESS UP\r\n");
+    else
+    {
+        //        INFO("LONGPRESS UP\r\n");
     }
 }
 
-
-void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
+void UIMain::Update(const IUICsc::CscData_t &data, bool force)
 {
     FLOW("UIMain::Update(CSC), force=%d\r\n", force);
     SetOperational();
 
-    if (!force && (0 != csc_watchdog_event_id_)) {
+    if (!force && (0 != csc_watchdog_event_id_))
+    {
         event_queue_.cancel(csc_watchdog_event_id_);
         csc_watchdog_event_id_ = event_queue_.call_in(10000u, mbed::callback(this, &UIMain::OnCscWatchdog));
     }
 
     switch (gui_mode_)
     {
-    case eCsc:
+    case IUIMode::eCsc:
         if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
         {
             INFO("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
@@ -148,15 +138,14 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
             DrawTime(Y_CSC_TRAVEL_TIME, data.trip_time_ms / 1000, color);
         }
         break;
-    case eKomoot:
+    case IUIMode::eKomoot:
     default:
         break;
     }
     last_csc_ = data;
 }
 
-
-void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
+void UIMain::Update(const IUIKomoot::KomootData_t &data, bool force)
 {
     FLOW("UIMain::Update(Komoot), force=%d\r\n", force);
 
@@ -166,7 +155,8 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
     {
         bool switch_to_komoot = false;
 
-        if (!switched_to_komoot_500_) {
+        if (!switched_to_komoot_500_)
+        {
             switched_to_komoot_500_ = true;
             switch_to_komoot = true;
         }
@@ -177,47 +167,51 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
             switch_to_komoot = true;
         }
 
-        if (last_komoot_.direction != data.direction) {
+        if (last_komoot_.direction != data.direction)
+        {
             switch_to_komoot = true;
         }
 
-        if (0 != strcmp((const char*)last_komoot_.street, (const char*)data.street)) {
+        if (0 != strcmp((const char *)last_komoot_.street, (const char *)data.street))
+        {
             switch_to_komoot = true;
         }
 
         if (switch_to_komoot)
         {
-            LedOn();
+            SetBacklightOn();
             switched_to_csc_ = false;
 
-            if (uisettings_.settings_.auto_switch) {
-                SetUiMode(eKomoot);
+            if (uisettings_.settings_.auto_switch)
+            {
+                SetUiMode(IUIMode::eKomoot);
             }
         }
-    } 
-    else 
+    }
+    else
     {
-        if (!switched_to_csc_) 
+        if (!switched_to_csc_)
         {
             switched_to_csc_ = true;
             switched_to_komoot_500_ = false;
             switched_to_komoot_100_ = false;
-            if (uisettings_.settings_.auto_switch) {
-                SetUiMode(eCsc);
+            if (uisettings_.settings_.auto_switch)
+            {
+                SetUiMode(IUIMode::eCsc);
             }
         }
     }
 
     switch (gui_mode_)
     {
-    case eKomoot:
+    case IUIMode::eKomoot:
 
         if (force || (last_komoot_.direction != data.direction) || (last_direction_color_ != GetKomootDirectionColor(data.distance_m)))
         {
             DrawKomootDirection(data);
         }
 
-        if (force || (0 != strcmp((const char*)last_komoot_.street, (const char*)data.street))) // new street => always show it
+        if (force || (0 != strcmp((const char *)last_komoot_.street, (const char *)data.street))) // new street => always show it
         {
             DrawKomootStreet(data);
             komoot_view_ = 0;
@@ -226,7 +220,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
         if (force || (last_komoot_.distance_m != data.distance_m))
         {
             DrawKomootDistance(data);
-//            DrawKomootDistanceBar(data);
+            //            DrawKomootDistanceBar(data);
         }
 
     default:
@@ -235,7 +229,7 @@ void UIMain::Update(const ISinkKomoot::KomootData_t &data, bool force)
     last_komoot_ = data;
 }
 
-void UIMain::DrawKomootDistance(const ISinkKomoot::KomootData_t &data)
+void UIMain::DrawKomootDistance(const IUIKomoot::KomootData_t &data)
 {
     //tft_->fillRect(0, Y_KOMOOT_MIDDLE_START, 80, Y_KOMOOT_BOTTOM_START-Y_KOMOOT_MIDDLE_START, 0);
     char str[10] = {0};
@@ -265,59 +259,62 @@ void UIMain::SetOperational()
     {
         INFO("Disable log\r\n");
         uilog = NULL;
-        SetUiMode(eCsc);
+        SetUiMode(IUIMode::eCsc);
     }
 }
 
-void UIMain::SetUiMode(eUiMode_t mode)
+void UIMain::SetUiMode(IUIMode::eUiMode_t mode)
 {
     INFO("SetUiMode %d\r\n", mode);
-    if (gui_mode_ != mode) 
+    if (gui_mode_ != mode)
     {
         gui_mode_ = mode;
         tft_->fillScreen(ST77XX_BLACK);
         switch (gui_mode_)
         {
-            case eKomoot:
-                Update(last_komoot_, true);
+        case IUIMode::eKomoot:
+            Update(last_komoot_, true);
             break;
-            case eCsc:
-                Update(last_csc_, true);
-                DrawCscConnState();
+        case IUIMode::eCsc:
+            Update(last_csc_, true);
+            DrawCscConnState();
             break;
-            case eSettings:
-                uisettings_.Draw();
-                break;
-            default:
+        case IUIMode::eSettings:
+            uisettings_.Draw();
             break;
-        }   
-    } 
+        default:
+            break;
+        }
+    }
 }
 
 void UIMain::DrawCscConnState()
 {
-    if (gui_mode_ == eCsc) {
-        const char* str = NULL;
-        switch (csc_conn_state_) {
-            case eOffline:
+    if (gui_mode_ == IUIMode::eCsc)
+    {
+        const char *str = NULL;
+        switch (csc_conn_state_)
+        {
+        case eOffline:
             str = "off";
             break;
-            case eDisconnected:
+        case eDisconnected:
             str = "xx";
             break;
-            case eConnecting:
+        case eConnecting:
             str = ">>";
             break;
-            case eConnected:
+        case eConnected:
             str = "c";
             last_csc_.filtered_speed_kmhX10 = 0xFFFF;
             //Update(last_csc_, true);
             break;
-            default:
+        default:
             break;
         }
 
-        if (NULL != str) {
+        if (NULL != str)
+        {
             tft_->fillRect(0, 0, 80, 40, 0);
             tft_->setFont(&Open_Sans_Condensed_Bold_31);
             tft_->setTextColor(0xFFFF);
@@ -330,7 +327,7 @@ void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
 {
     char str[10];
     uint16_t len = sprintf(str, ".%i", speed_kmhX10 % 10);
-  
+
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
     tft_->setTextColor(color);
     tft_->WriteStringLen(56, y + 12, 24, str, len, 0, GFX::eLeft);
@@ -354,7 +351,6 @@ void UIMain::SetCadenceColor(uint16_t cadence)
     else
         tft_->setTextColor(Adafruit_ST7735::Color565(0, 255, 0));
 }
-
 
 void UIMain::DrawCadence(uint16_t x, uint16_t y, uint16_t cadence)
 {
@@ -387,14 +383,14 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
     tft_->WriteStringLen(0, y, 80, str, len);
 }
 
-void UIMain::DrawKomootStreet(const ISinkKomoot::KomootData_t &data)
+void UIMain::DrawKomootStreet(const IUIKomoot::KomootData_t &data)
 {
-    tft_->fillRect(0, Y_KOMMOT_STREET, 80, 160-Y_KOMMOT_STREET, 0);
+    tft_->fillRect(0, Y_KOMMOT_STREET, 80, 160 - Y_KOMMOT_STREET, 0);
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
     char street_ascii[20];
     ConvertUtf8toAscii(data.street, strlen((char *)data.street), street_ascii, sizeof(street_ascii));
-    tft_->WriteString(0, Y_KOMMOT_STREET, 80, 160-Y_KOMMOT_STREET, street_ascii);
+    tft_->WriteString(0, Y_KOMMOT_STREET, 80, 160 - Y_KOMMOT_STREET, street_ascii);
 }
 
 uint16_t UIMain::GetKomootDistanceBarColor(uint16_t distance_m)
@@ -408,7 +404,7 @@ uint16_t UIMain::GetKomootDistanceBarColor(uint16_t distance_m)
     {
         color = Adafruit_ST7735::Color565(255, 255, 0);
     }
-    else 
+    else
     {
         color = Adafruit_ST7735::Color565(0, 255, 0);
     }
@@ -421,7 +417,7 @@ uint16_t UIMain::GetKomootDirectionColor(uint16_t distance_m)
     return color;
 }
 
-void UIMain::DrawKomootDirection(const ISinkKomoot::KomootData_t &data)
+void UIMain::DrawKomootDirection(const IUIKomoot::KomootData_t &data)
 {
     const uint8_t *ptr = GetNavIcon(data.direction);
     if (ptr)
@@ -431,55 +427,33 @@ void UIMain::DrawKomootDirection(const ISinkKomoot::KomootData_t &data)
     }
 }
 
-void UIMain::DrawKomootDistanceBar(const ISinkKomoot::KomootData_t &data)
+void UIMain::UpdateCscBat(uint8_t val)
 {
-    uint16_t warn_distance = 400;
-    uint8_t w = 14;
-    uint8_t h = 60;
-    uint16_t color = 0;
-    uint16_t k = h;
-    if (data.distance_m < warn_distance) {
-        k = data.distance_m * h / warn_distance;
-        color = Adafruit_ST7735::Color565(10, 10, 10);
-    }
-    if (last_distance_bar_ != k) {
-
-        last_distance_bar_ = k;
-        tft_->fillRect(0, 0, w, k, color);
-
-        if (k < h) {
-            color = GetKomootDistanceBarColor(data.distance_m);
-            tft_->fillRect(0, k, w, h-k, color);
-        }
-    }
+    uisettings_.UpdateCscBat(val);
 }
 
-void UIMain::UpdateBat(uint8_t val)
-{
-    uisettings_.UpdateBat(val);
-}
-
-void UIMain::LedOff()
+void UIMain::SetBacklightOff()
 {
     led_event_id_ = 0;
-    SetUiBrightness(uisettings_.settings_.display_brightness_off);
+    SetBacklightBrightness(uisettings_.settings_.display_brightness_off);
 }
 
-void UIMain::LedOn()
+void UIMain::SetBacklightOn()
 {
-    if( 0 != led_event_id_) {
+    if (0 != led_event_id_)
+    {
         event_queue_.cancel(led_event_id_);
     }
-    led_event_id_ = event_queue_.call_in(uisettings_.settings_.display_time*1000,  mbed::callback(this, &UIMain::LedOff));
-    SetUiBrightness(uisettings_.settings_.display_brightness_on);
+    led_event_id_ = event_queue_.call_in(uisettings_.settings_.display_time * 1000, mbed::callback(this, &UIMain::SetBacklightOff));
+    SetBacklightBrightness(uisettings_.settings_.display_brightness_on);
 }
 
-void UIMain::SetUiBrightness(uint8_t val)
+void UIMain::SetBacklightBrightness(uint8_t val)
 {
     display_led = (float)val / 10.0f;
 }
 
-void UIMain::UpdateConnState(ConState_t state)
+void UIMain::UpdateCscConnState(ConState_t state)
 {
     csc_conn_state_ = state;
     event_queue_.call(mbed::callback(this, &UIMain::DrawCscConnState));
@@ -487,13 +461,15 @@ void UIMain::UpdateConnState(ConState_t state)
 
 void UIMain::OnCscWatchdog()
 {
-    UpdateConnState(ISinkCsc::eOffline);
-    if (NULL != bike_computer_) {
-        bike_computer_->ConnectCsc();
+    UpdateCscConnState(IUICsc::eOffline);
+    if (NULL != bike_computer_)
+    {
+        bike_computer_->Connect(BC::eCsc);
     }
 }
 
-void UIMain::SetBikeComputer(IBikeComputer* bike_computer)
+void UIMain::SetBikeComputer(IBikeComputer *bike_computer)
 {
     bike_computer_ = bike_computer;
+    uisettings_.SetBikeComputer(bike_computer);
 }

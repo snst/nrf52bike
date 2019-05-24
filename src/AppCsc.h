@@ -3,7 +3,7 @@
 
 #include "mbed.h"
 #include <stdint.h>
-#include "ISinkCsc.h"
+#include "IUICsc.h"
 #include "events/EventQueue.h"
 
 #define SPEED_FILTER_VALUES_CNT 5u
@@ -28,7 +28,7 @@ class AppCsc
     } cscMsg_t;
 
     cscMsg_t last_msg_;
-    ISinkCsc::CscData_t data_;
+    IUICsc::CscData_t data_;
     double wheel_size_cm_;
     uint32_t crank_counter_sum_;
     uint32_t crank_event_sum_;

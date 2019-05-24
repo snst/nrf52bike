@@ -4,12 +4,12 @@
 #include "BleAppBase.h"
 #include "AppCsc.h"
 
-class ISinkCsc;
+class IUICsc;
 
 class BleAppCsc : public BleAppBase
 {
   public:
-    BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, ISinkCsc* sink);
+    BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, IUICsc* sink);
     virtual ~BleAppCsc();
     void OnHVX(const GattHVXCallbackParams *params);
     void OnDataRead(const GattReadCallbackParams *params);
@@ -19,7 +19,7 @@ class BleAppCsc : public BleAppBase
 
   protected:
     AppCsc csc_;
-    ISinkCsc* sink_;
+    IUICsc* ui_;
 };
 
 #endif

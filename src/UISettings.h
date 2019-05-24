@@ -5,7 +5,8 @@
 #include <Adafruit_ST7735.h>
 #include "IUIMode.h"
 
-typedef enum eSmState {
+typedef enum eSmState
+{
     eBat,
     eLedOn,
     eLedOff,
@@ -13,33 +14,36 @@ typedef enum eSmState {
     eDist,
     eAutoSwitch,
     eLightUp,
+    eConnect,
     eSave,
     eExit,
 } eSmState_t;
 
-typedef enum eSmEvent {
+typedef enum eSmEvent
+{
     eShort,
     eLong
 } eSmEvent_t;
 
-
 class UISettings;
+class IBikeComputer;
 
 typedef void (UISettings::*SmFunc)(void);
 
-typedef struct SmEntry {
+typedef struct SmEntry
+{
     eSmState state;
-    const char* name;
+    const char *name;
     bool editable;
     SmFunc func;
     eSmState next;
 } SmEntry_t;
 
+
 class UISettings
 {
-   
-    public:
-    UISettings(GFX* tft, IUIMode* mode);
+public:
+    UISettings(GFX *tft);
     void LongPress();
     void ShortPress();
     void IncBrightnessDisplayOn();
@@ -51,20 +55,22 @@ class UISettings
     void SaveSettings();
     void LoadSettings();
     void Draw();
-    void UpdateBat(uint8_t val);
+    void UpdateCscBat(uint8_t val);
     void HandleEvent(eSmEvent ev);
     void LeaveSettings();
-    SmEntry_t* GetStateEntry(eSmState state);
+    void Connect();
+    SmEntry_t *GetStateEntry(eSmState state);
+    void SetBikeComputer(IBikeComputer *bike_computer);
 
     uint8_t csc_bat_;
-    GFX* tft_;
-    IUIMode* uimode_;
+    GFX *tft_;
     eSmState_t sm_state_;
     bool edit_mode_;
 
-    SmEntry setting_sm[9];
+    SmEntry setting_sm[10];
 
-    typedef struct SettingsData {
+    typedef struct SettingsData
+    {
         uint16_t komoot_alert_dist;
         uint8_t display_brightness_on;
         uint8_t display_brightness_off;
@@ -75,7 +81,7 @@ class UISettings
     } SettingsData_t;
 
     SettingsData_t settings_;
-
+    IBikeComputer* bike_computer_;
 };
 
 #endif

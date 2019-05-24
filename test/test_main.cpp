@@ -3,7 +3,7 @@
 #include "TftEmu.h"
 #include "../font/Open_Sans_Condensed_Bold_31.h"
 #include "../font/Open_Sans_Condensed_Bold_49.h"
-#include "ISinkCsc.h"
+#include "IUICsc.h"
 #include "AppCsc.h"
 #include "IUILog.h"
 #include "UIMain.h"
@@ -37,12 +37,12 @@ int main(int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
-class CscTestData : public ISinkCsc
+class CscTestData : public IUICsc
 {
   public:
     CscTestData() {}
     virtual void Update(const CscData_t& data, bool force) {}
-    virtual void UpdateBat(uint8_t val) {}
+    virtual void UpdateCscBat(uint8_t val) {}
 };
 
 TEST(CSC, ProcessData)
@@ -143,7 +143,7 @@ TEST(UIMain, kommot_dist_1)
     TftEmu tft;
     tft.initR(INITR_MINI160x80);
     events::EventQueue eq;
-    ISinkKomoot::KomootData_t d;
+    IUIKomoot::KomootData_t d;
     UIMain ui(&tft, eq);
     d.distance_m = 1;
     ui.DrawKomootDistance(d);

@@ -3,18 +3,18 @@
 
 #define DISCONNECTED_HANDLE (0xFFFFu)
 
-BleAppBase::BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char *name) : event_queue_(event_queue),
-                                                                                                        ble_(ble_interface),
-                                                                                                        _post_init_cb(),
-                                                                                                        desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
-                                                                                                        found_characteristic_bat_(false),
-                                                                                                        found_characteristic_(false),
-                                                                                                        found_desc2902_(false),
-                                                                                                        found_device_(false),
-                                                                                                        app_callback_(NULL),
-                                                                                                        connection_handle_(DISCONNECTED_HANDLE),
-                                                                                                        bat_requested_(false)
-                                                                                                        
+BleAppBase::BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char *name, BC::eApp_t id) : event_queue_(event_queue),
+                                                                                                         ble_(ble_interface),
+                                                                                                         _post_init_cb(),
+                                                                                                         desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
+                                                                                                         found_characteristic_bat_(false),
+                                                                                                         found_characteristic_(false),
+                                                                                                         found_desc2902_(false),
+                                                                                                         found_device_(false),
+                                                                                                         connection_handle_(DISCONNECTED_HANDLE),
+                                                                                                         bat_requested_(false),
+                                                                                                         app_id_(id)
+
 {
   strcpy(name_, name);
 }
@@ -23,7 +23,12 @@ BleAppBase::~BleAppBase()
 {
 }
 
-bool BleAppBase::HaveFoundDevice()
+BC::eApp_t BleAppBase::getId()
+{
+  return app_id_;
+}
+
+bool BleAppBase::FoundDevice()
 {
   return found_device_;
 }
@@ -52,23 +57,21 @@ void BleAppBase::OnConnected(const Gap::ConnectionCallbackParams_t *params)
   connection_handle_ = params->handle;
   INFO("~BleAppBase::OnConnected(%s) handle=0x%x\r\n", name_, connection_handle_);
   UILog(".ok.");
-  
-  if (!FoundCharacteristic())
+
+  if (!FoundDescNotify())
   {
     event_queue_.call_in(100, mbed::callback(this, &BleAppBase::StartServiceDiscovery));
   }
   else
   {
-    OnServiceDiscoveryFinished(connection_handle_);
+    OnAllServiceAndCharFound();
   }
-  
 }
 
 void BleAppBase::OnDisconnected(const Gap::DisconnectionCallbackParams_t *param)
 {
   INFO("~BleAppBase::OnDisconnected(%s) handle=0x%x, reason=0x%x\r\n", name_, param->handle, param->reason);
   connection_handle_ = DISCONNECTED_HANDLE;
-  //event_queue_.call_in(500, mbed::callback(this, &BleAppBase::Connect));
 }
 
 bool BleAppBase::IsConnected()
@@ -147,32 +150,22 @@ void BleAppBase::OnAllServiceAndCharFound()
   INFO("~BleAppBase::OnAllServiceAndCharFound(%s)\r\n", name_);
   event_queue_.call_in(100, mbed::callback(this, &BleAppBase::RequestNotify));
 
-  if (!bat_requested_) {
+  if (!bat_requested_)
+  {
     event_queue_.call_in(200, mbed::callback(this, &BleAppBase::RequestBatteryLevel));
     bat_requested_ = true;
-  }
-
-  event_queue_.call_in(300, mbed::callback(this, &BleAppBase::OnAppReady));
-}
-
-void BleAppBase::OnAppReady()
-{
-  INFO("~BleAppBase::OnAppReady(%s)\r\n", name_);
-  if (NULL != app_callback_)
-  {
-    app_callback_->OnAppReady(this);
   }
 }
 
 bool BleAppBase::RequestBatteryLevel()
 {
-  if (found_characteristic_bat_) {
+  if (found_characteristic_bat_)
+  {
     ble_error_t err = characteristic_bat_.read(0);
     INFO("~BleAppBase::RequestBatteryLevel() ret=0x%x\r\n", err);
   }
   return found_characteristic_bat_;
 }
-
 
 void BleAppBase::OnCharacteristicDescriptorsFinished(const CharacteristicDescriptorDiscovery::TerminationCallbackParams_t *params)
 {
@@ -204,9 +197,7 @@ void BleAppBase::ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc) {}
 
 void BleAppBase::OnDataRead(const GattReadCallbackParams *params) {}
 
-void BleAppBase::OnHVX(const GattHVXCallbackParams *params)
-{
-}
+void BleAppBase::OnHVX(const GattHVXCallbackParams *params) {}
 
 void BleAppBase::on_init(mbed::Callback<void(BLE &, events::EventQueue &)> cb)
 {
@@ -245,13 +236,7 @@ DiscoveredCharacteristic &BleAppBase::GetCharacteristic()
   return characteristic_;
 }
 
-void BleAppBase::SetAppCallback(IAppCallback *cb)
-{
-  app_callback_ = cb;
-}
-
-
-const char* BleAppBase::getName()
+const char *BleAppBase::GetName()
 {
   return name_;
 }
