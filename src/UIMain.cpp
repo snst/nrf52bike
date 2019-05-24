@@ -148,7 +148,6 @@ void UIMain::Update(const IUICsc::CscData_t &data, bool force)
 void UIMain::Update(const IUIKomoot::KomootData_t &data, bool force)
 {
     FLOW("UIMain::Update(Komoot), force=%d\r\n", force);
-
     SetOperational();
 
     if (data.distance_m <= uisettings_.settings_.komoot_alert_dist)
@@ -220,7 +219,6 @@ void UIMain::Update(const IUIKomoot::KomootData_t &data, bool force)
         if (force || (last_komoot_.distance_m != data.distance_m))
         {
             DrawKomootDistance(data);
-            //            DrawKomootDistanceBar(data);
         }
 
     default:
@@ -254,7 +252,6 @@ void UIMain::Log(const char *str)
 
 void UIMain::SetOperational()
 {
-    //INFO("SetOperational()1\r\n");
     if (NULL != uilog)
     {
         INFO("Disable log\r\n");
@@ -391,24 +388,6 @@ void UIMain::DrawKomootStreet(const IUIKomoot::KomootData_t &data)
     char street_ascii[20];
     ConvertUtf8toAscii(data.street, strlen((char *)data.street), street_ascii, sizeof(street_ascii));
     tft_->WriteString(0, Y_KOMMOT_STREET, 80, 160 - Y_KOMMOT_STREET, street_ascii);
-}
-
-uint16_t UIMain::GetKomootDistanceBarColor(uint16_t distance_m)
-{
-    uint16_t color;
-    if (distance_m <= 100u)
-    {
-        color = Adafruit_ST7735::Color565(255, 0, 0);
-    }
-    else if (distance_m <= 200u)
-    {
-        color = Adafruit_ST7735::Color565(255, 255, 0);
-    }
-    else
-    {
-        color = Adafruit_ST7735::Color565(0, 255, 0);
-    }
-    return color;
 }
 
 uint16_t UIMain::GetKomootDirectionColor(uint16_t distance_m)

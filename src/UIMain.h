@@ -44,8 +44,6 @@ public:
   void DrawKomootStreet(const IUIKomoot::KomootData_t &data);
   void DrawKomootDirection(const IUIKomoot::KomootData_t &data);
   void SetCadenceColor(uint16_t cadence);
-  void DrawKomootDistanceBar(const IUIKomoot::KomootData_t &data);
-  uint16_t GetKomootDistanceBarColor(uint16_t distance_m);
   uint16_t GetKomootDirectionColor(uint16_t distance_m);
   void LongPress();
   void DrawSettings();
