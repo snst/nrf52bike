@@ -10,6 +10,7 @@
 #include "IUILog.h"
 #include "UISettings.h"
 #include "IUIMode.h"
+#include "IBikeComputer.h"
 
 class UIMain : public ISinkCsc, public ISinkKomoot, public IUILog, public IUIMode
 {
@@ -70,6 +71,9 @@ public:
   ConState_t csc_conn_state_;
   int csc_watchdog_event_id_;
   void OnCscWatchdog();
+  IBikeComputer* bike_computer_;
+  void SetBikeComputer(IBikeComputer* bike_computer);
+
 };
 
 #endif

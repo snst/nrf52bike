@@ -5,10 +5,11 @@
 #include "BleAppCsc.h"
 #include "BleAppKomoot.h"
 #include <vector>
+#include "IBikeComputer.h"
 
 class UIMain;
 
-class BikeComputer : public BleManagerBase
+class BikeComputer : public BleManagerBase, public IBikeComputer
 {
 public:
   BleAppCsc csc_app;
@@ -32,6 +33,8 @@ public:
   void ConnectDevices();
   std::vector<BleAppBase*> apps_;
   void ConnectApp(BleAppBase* app);
+  void ConnectCsc();
+  void ConnectKomoot();
 };
 
 #endif

@@ -110,7 +110,7 @@ void UIMain::Update(const ISinkCsc::CscData_t &data, bool force)
 
     if (!force && (0 != csc_watchdog_event_id_)) {
         event_queue_.cancel(csc_watchdog_event_id_);
-        csc_watchdog_event_id_ = event_queue_.call_in(5000u, mbed::callback(this, &UIMain::OnCscWatchdog));
+        csc_watchdog_event_id_ = event_queue_.call_in(10000u, mbed::callback(this, &UIMain::OnCscWatchdog));
     }
 
     switch (gui_mode_)
@@ -283,6 +283,7 @@ void UIMain::SetUiMode(eUiMode_t mode)
             break;
             case eCsc:
                 Update(last_csc_, true);
+                DrawCscConnState();
             break;
             case eSettings:
                 uisettings_.Draw();
@@ -302,13 +303,13 @@ void UIMain::DrawCscConnState()
             str = "off";
             break;
             case eDisconnected:
-            str = "dis";
+            str = "xx";
             break;
             case eConnecting:
-            str = "c.ing";
+            str = ">>";
             break;
             case eConnected:
-            str = "c.ted";
+            str = "c";
             last_csc_.filtered_speed_kmhX10 = 0xFFFF;
             //Update(last_csc_, true);
             break;
@@ -487,4 +488,12 @@ void UIMain::UpdateConnState(ConState_t state)
 void UIMain::OnCscWatchdog()
 {
     UpdateConnState(ISinkCsc::eOffline);
+    if (NULL != bike_computer_) {
+        bike_computer_->ConnectCsc();
+    }
+}
+
+void UIMain::SetBikeComputer(IBikeComputer* bike_computer)
+{
+    bike_computer_ = bike_computer;
 }
