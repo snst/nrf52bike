@@ -1,4 +1,5 @@
 #include "BleAppKomoot.h"
+#include "common.h"
 
 BleAppKomoot::BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, IUIKomoot *ui)
     : BleAppBase(event_queue, ble_interface, "Komoot", BC::eKomoot), ui_(ui)
@@ -24,7 +25,7 @@ bool BleAppKomoot::ProcessData(const uint8_t *data, uint32_t len)
         distance_m |= data[6] << 8;
         distance_m |= data[7] << 16;
         distance_m |= data[8] << 24;
-        data_.distance_m = distance_m;
+        data_.distance_m = RoundDistance(distance_m);
 
         memcpy(data_.street, &data[9], len - 9);
         data_.street[len - 9] = '\0';

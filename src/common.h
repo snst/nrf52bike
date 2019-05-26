@@ -9,5 +9,7 @@ extern Timer timer;
 void ConvertUtf8toAscii(const uint8_t* in, uint16_t in_len, char* out, uint16_t out_len);
 void StartTimer();
 uint32_t GetMillis();
+uint32_t RoundDistance(uint32_t val);
+
 
 #endif

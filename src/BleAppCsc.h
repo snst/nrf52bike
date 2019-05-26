@@ -16,10 +16,12 @@ class BleAppCsc : public BleAppBase
     virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
     virtual bool Connect();
+    uint32_t GetDisconnects();
 
   protected:
     AppCsc csc_;
     IUICsc* ui_;
+    uint32_t disconnect_cnt_;
 };
 
 #endif

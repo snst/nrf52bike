@@ -231,18 +231,20 @@ void UIMain::DrawKomootDistance(const IUIKomoot::KomootData_t &data)
 {
     //tft_->fillRect(0, Y_KOMOOT_MIDDLE_START, 80, Y_KOMOOT_BOTTOM_START-Y_KOMOOT_MIDDLE_START, 0);
     char str[10] = {0};
-    uint8_t len;
-    if (data.distance_m <= 999)
+    if (data.distance_m == 0) {
+        strcpy(str, "now");
+    }
+    else if (data.distance_m <= 999)
     {
-        len = sprintf(str, "%i", data.distance_m);
+        sprintf(str, "%i", data.distance_m);
     }
     else
     {
-        len = sprintf(str, "%i.%i", data.distance_m / 1000u, (data.distance_m % 1000u) / 100u);
+        sprintf(str, "%i.%i", data.distance_m / 1000u, (data.distance_m % 1000u) / 100u);
     }
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
     tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft_->WriteStringLen(0, Y_KOMMOT_DISTANCE, 80, str, len, 2, GFX::eCenter);
+    tft_->WriteStringLen(0, Y_KOMMOT_DISTANCE, 80, str, -1, 2, GFX::eCenter);
 }
 
 void UIMain::Log(const char *str)

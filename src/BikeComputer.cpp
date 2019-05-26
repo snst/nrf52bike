@@ -177,3 +177,9 @@ void BikeComputer::SetBacklightBrightness(uint8_t val)
 {
     ui_->SetBacklightBrightness(val);
 }
+
+
+uint32_t BikeComputer::GetCscDisconnects()
+{
+    return csc_app.GetDisconnects();
+}

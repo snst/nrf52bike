@@ -77,3 +77,9 @@ uint32_t GetMillis()
 {
     return timer.read_ms();
 }
+
+uint32_t RoundDistance(uint32_t val)
+{
+    uint32_t ret = ((val + 5) / 10) * 10;
+    return ret;
+}

@@ -31,6 +31,7 @@ public:
 
   virtual void SetUiMode(IUIMode::eUiMode_t mode);
   virtual void SetBacklightBrightness(uint8_t val);
+  virtual uint32_t GetCscDisconnects();
 
 
 protected:
