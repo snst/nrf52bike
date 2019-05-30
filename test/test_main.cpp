@@ -83,19 +83,19 @@ TEST(CSC, FilteredSpeed)
 
     csc.data_.speed_kmhX10 = 100;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(100 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    EXPECT_EQ(100 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
     csc.data_.speed_kmhX10 = 50;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(150 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    EXPECT_EQ(150 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
     csc.data_.speed_kmhX10 = 200;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ(350 / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    EXPECT_EQ(350 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 
     csc.data_.speed_kmhX10 = 80;
     csc.CalculateAverageSpeed();
-    EXPECT_EQ((50+200+80) / SPEED_FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    EXPECT_EQ((50+200+80) / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
 }
 
 TEST(common, utf_0x01)

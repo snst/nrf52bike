@@ -15,6 +15,7 @@ typedef enum eSmState
     eAutoSwitch,
     eLightUp,
     eConnect,
+    eToggleSec,
     eSave,
     eExit,
 } eSmState_t;
@@ -52,9 +53,11 @@ public:
     void IncKomootAlertDist();
     void IncAutoSwitch();
     void IncLightUp();
+    void IncToggleSec();
     void SaveSettings();
     void LoadSettings();
     void Draw();
+    void SystemOff();
     void UpdateCscBat(uint8_t val);
     void HandleEvent(eSmEvent ev);
     void LeaveSettings();
@@ -67,7 +70,7 @@ public:
     eSmState_t sm_state_;
     bool edit_mode_;
 
-    SmEntry setting_sm[10];
+    SmEntry setting_sm[11];
 
     typedef struct SettingsData
     {
@@ -77,7 +80,7 @@ public:
         uint8_t display_time;
         uint8_t auto_switch;
         uint8_t light_up;
-        uint8_t pad;
+        uint8_t toggle_sec;
     } SettingsData_t;
 
     SettingsData_t settings_;

@@ -3,20 +3,22 @@
 #include "tracer.h"
 #include "icons.h"
 #include "../font/Open_Sans_Condensed_Bold_31.h"
+//#include "../font/Open_Sans_Condensed_Bold_38.h"
 #include "../font/Open_Sans_Condensed_Bold_49.h"
+#include "../font/Open_Sans_Condensed_Bold_37.h"
 #include "common.h"
 
 //DigitalOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
-#define Y_CSC_SPEED 0u
-#define Y_CSC_AVERAGE_SPEED (Y_CSC_SPEED + 40u)
-#define Y_CSC_CADENCE (Y_CSC_AVERAGE_SPEED + 40u)
-#define Y_CSC_TRAVEL_DISTANCE (Y_CSC_CADENCE + 26u)
-#define Y_CSC_TRAVEL_TIME (Y_CSC_TRAVEL_DISTANCE + 26u)
+#define Y_LINE1 0u
+#define Y_LINE2 (Y_LINE1 + 45u)
+#define Y_LINE3 (Y_LINE2 + 45u)
+#define Y_LINE4 (160u - 28u)
 
 #define Y_KOMMOT_DISTANCE (62u)
 #define Y_KOMMOT_STREET (105)
+
 
 PwmOut display_led((PinName)11);
 
@@ -24,7 +26,7 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup), komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false), last_distance_bar_(0xFF), last_direction_color_(0), longpress_handled_(false), uisettings_(tft), led_event_id_(0), ignore_touch_up_(false), switched_to_komoot_100_(false), switched_to_komoot_500_(false), csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
-    tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_->setTextColor(COLOR_WHITE);
     tft_->setCursor(0, 5);
     tft_->setTextWrap(true);
     tft_->setFont(NULL);
@@ -36,7 +38,7 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     memset(&last_komoot_, 0, sizeof(last_komoot_));
 }
 
-#define LONGPRESS_MS (1000u)
+#define LONGPRESS_MS (500u)
 
 void UIMain::LongPress()
 {
@@ -58,9 +60,14 @@ void UIMain::TouchDown()
     ignore_touch_up_ = (0 == led_event_id_);
     //INFO("D\r\n");
     touch_down_ms_ = GetMillis();
-    longpress_id_ = event_queue_.call_in(500, mbed::callback(this, &UIMain::LongPress));
+    longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::LongPress));
     longpress_handled_ = false;
     SetBacklightOn();
+}
+
+bool UIMain::IgnoreShortTouchUp()
+{
+    return uisettings_.settings_.light_up && ignore_touch_up_;
 }
 
 void UIMain::TouchUp()
@@ -68,17 +75,26 @@ void UIMain::TouchUp()
     if (!longpress_handled_)
     {
         event_queue_.cancel(longpress_id_);
-        //        INFO("SHORTPRESS UP\r\n");
-        if (!uisettings_.settings_.light_up || !ignore_touch_up_)
+
+        if (!IgnoreShortTouchUp())
         {
             switch (gui_mode_)
             {
             default:
-            case IUIMode::eKomoot:
+            case IUIMode::eStartup:
                 SetUiMode(IUIMode::eCsc);
                 break;
+            case IUIMode::eKomoot:
+                if (bike_computer_->IsAppAvailable(BC::eCsc))
+                {
+                    SetUiMode(IUIMode::eCsc);
+                }
+                break;
             case IUIMode::eCsc:
-                SetUiMode(IUIMode::eKomoot);
+                if (bike_computer_->IsAppAvailable(BC::eKomoot))
+                {
+                    SetUiMode(IUIMode::eKomoot);
+                }
                 break;
             case IUIMode::eSettings:
                 uisettings_.ShortPress();
@@ -108,35 +124,29 @@ void UIMain::Update(const IUICsc::CscData_t &data, bool force)
     case IUIMode::eCsc:
         if (force || (last_csc_.filtered_speed_kmhX10 != data.filtered_speed_kmhX10))
         {
-            INFO("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
-            DrawSpeed(Y_CSC_SPEED, data.filtered_speed_kmhX10);
+            FLOW("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
+            DrawSpeed(Y_LINE1, data.filtered_speed_kmhX10);
         }
+        /*
         if (force || (last_csc_.average_speed_kmhX10 != data.average_speed_kmhX10))
         {
             INFO("Update, eCsc, average speed: %u\r\n", data.average_speed_kmhX10);
-            DrawSpeed(Y_CSC_AVERAGE_SPEED, data.average_speed_kmhX10);
-        }
+            DrawAverageSpeed(Y_LINE3, data.average_speed_kmhX10);
+        }*/
         if (force || (last_csc_.cadence != data.cadence))
         {
-            INFO("Update, eCsc, cadence: %u\r\n", data.cadence);
-            DrawCadence(0, Y_CSC_CADENCE, data.cadence);
+            FLOW("Update, eCsc, cadence: %u\r\n", data.cadence);
+            DrawCadence(0, Y_LINE2, data.filtered_cadence);
         }
+        /*
         if (force || (last_csc_.average_cadence != data.average_cadence))
         {
             INFO("Update, eCsc, average_cadence: %u\r\n", data.average_cadence);
-            DrawCadence(40, Y_CSC_CADENCE, data.average_cadence);
+            DrawCadence(40, Y_LINE2, data.average_cadence);
         }
-        if (force || (last_csc_.trip_distance_cm != data.trip_distance_cm))
-        {
-            INFO("Update, eCsc, trip distance: %u\r\n", data.trip_distance_cm);
-            DrawDistance(Y_CSC_TRAVEL_DISTANCE, data.trip_distance_cm / 100);
-        }
-        if (force || (last_csc_.trip_time_ms != data.trip_time_ms) || (last_csc_.is_riding != data.is_riding))
-        {
-            uint16_t color = data.is_riding ? Adafruit_ST7735::Color565(255, 255, 255) : Adafruit_ST7735::Color565(255, 0, 0);
-            INFO("Update, eCsc, trip time: %u\r\n", data.trip_time_ms);
-            DrawTime(Y_CSC_TRAVEL_TIME, data.trip_time_ms / 1000, color);
-        }
+        */
+        DrawCscToggleDisplay(data, force);
+
         break;
     case IUIMode::eKomoot:
     default:
@@ -231,7 +241,8 @@ void UIMain::DrawKomootDistance(const IUIKomoot::KomootData_t &data)
 {
     //tft_->fillRect(0, Y_KOMOOT_MIDDLE_START, 80, Y_KOMOOT_BOTTOM_START-Y_KOMOOT_MIDDLE_START, 0);
     char str[10] = {0};
-    if (data.distance_m == 0) {
+    if (data.distance_m == 0)
+    {
         strcpy(str, "now");
     }
     else if (data.distance_m <= 999)
@@ -243,7 +254,7 @@ void UIMain::DrawKomootDistance(const IUIKomoot::KomootData_t &data)
         sprintf(str, "%i.%i", data.distance_m / 1000u, (data.distance_m % 1000u) / 100u);
     }
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
-    tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_->setTextColor(COLOR_WHITE);
     tft_->WriteStringLen(0, Y_KOMMOT_DISTANCE, 80, str, -1, 2, GFX::eCenter);
 }
 
@@ -275,8 +286,10 @@ void UIMain::SetUiMode(IUIMode::eUiMode_t mode)
             Update(last_komoot_, true);
             break;
         case IUIMode::eCsc:
+            csc_toggle_view_ = eShowDist;
             Update(last_csc_, true);
             DrawCscConnState();
+            event_queue_.call_in(uisettings_.settings_.toggle_sec * 1000u, mbed::callback(this, &UIMain::ToggleCscDisplay));
             break;
         case IUIMode::eSettings:
             uisettings_.Draw();
@@ -289,6 +302,7 @@ void UIMain::SetUiMode(IUIMode::eUiMode_t mode)
 
 void UIMain::DrawCscConnState()
 {
+    return; // stsc
     if (gui_mode_ == IUIMode::eCsc)
     {
         const char *str = NULL;
@@ -316,48 +330,55 @@ void UIMain::DrawCscConnState()
         {
             tft_->fillRect(0, 0, 80, 40, 0);
             tft_->setFont(&Open_Sans_Condensed_Bold_31);
-            tft_->setTextColor(0xFFFF);
+            tft_->setTextColor(COLOR_WHITE);
             tft_->WriteStringLen(0, 5, 80, str, -1, 0, GFX::eCenter);
         }
     }
 }
 
+void UIMain::DrawAverageSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
+{
+    char str[10];
+    //speed_kmhX10 = 1444;
+    uint16_t len = sprintf(str, "%i.%i", speed_kmhX10 / 10, speed_kmhX10 % 10);
+
+    tft_->setFont(&Open_Sans_Condensed_Light_37);
+    tft_->setTextColor(color);
+    tft_->WriteStringLen(0, y, 80, str, -1, 0, GFX::eRight);
+}
+
 void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
 {
     char str[10];
-    uint16_t len = sprintf(str, ".%i", speed_kmhX10 % 10);
-
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
+    //speed_kmhX10 = 444;
     tft_->setTextColor(color);
-    tft_->WriteStringLen(56, y + 12, 24, str, len, 0, GFX::eLeft);
 
-    len = sprintf(str, "%i", speed_kmhX10 / 10);
-    tft_->setFont(&Open_Sans_Condensed_Bold_49);
-    tft_->WriteStringLen(0, y, 56, str, len);
+    sprintf(str, " %i", speed_kmhX10 % 10);
+    tft_->setFont(&Open_Sans_Condensed_Light_37);
+    tft_->WriteStringLen(80-18, y + 0, 18, str, -1, 0, GFX::eLeft);
 
-    /*
+    sprintf(str, "%i", speed_kmhX10 / 10);
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
-    tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
-    tft_->WriteStringLen(0, Y_SPEED, 80, str, len);
-    */
+    tft_->WriteStringLen(0, y, 60, str, -1, 1);
 }
+
 void UIMain::SetCadenceColor(uint16_t cadence)
 {
     if (cadence < 80)
-        tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+        tft_->setTextColor(COLOR_WHITE);
     else if (cadence > 95)
-        tft_->setTextColor(Adafruit_ST7735::Color565(255, 0, 0));
+        tft_->setTextColor(COLOR_WARN);
     else
-        tft_->setTextColor(Adafruit_ST7735::Color565(0, 255, 0));
+        tft_->setTextColor(COLOR_GREEN);
 }
 
 void UIMain::DrawCadence(uint16_t x, uint16_t y, uint16_t cadence)
 {
     char str[10];
-    uint16_t len = sprintf(str, "%i", cadence);
+    sprintf(str, "%i", cadence);
     SetCadenceColor(cadence);
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
-    tft_->WriteStringLen(x, y, 40, str, len);
+    tft_->setFont(&Open_Sans_Condensed_Light_37);
+    tft_->WriteStringLen(0, y, 80, str);
 }
 
 void UIMain::DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color)
@@ -366,27 +387,29 @@ void UIMain::DrawTime(uint16_t y, uint32_t trip_time_sec, uint16_t color)
     uint8_t hour = trip_time_sec / 3660;
     uint8_t min = (trip_time_sec / 60) % 60;
     uint8_t sec = trip_time_sec % 60;
-    uint8_t len = sprintf(str, "%i:%.2i", hour, min);
+    sprintf(str, "%i:%.2i", hour, min);
     tft_->setTextColor(color);
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
-    tft_->WriteStringLen(0, y, 80, str, len);
+    tft_->setFont(&Open_Sans_Condensed_Light_37);
+    tft_->WriteStringLen(0, y, 80, str);
+    //    tft_->WriteStringLen(0, y, 80, "144 144", -1);
 }
 
 void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
 {
     char str[10];
+    //trip_distance_m = 144440;
     uint16_t km = trip_distance_m / 1000;
-    uint8_t len = sprintf(str, "%i.%.2i", km, (trip_distance_m % 1000) / 10);
+    sprintf(str, "%i.%i", km, (trip_distance_m % 1000) / 100);
     tft_->setTextColor(color);
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
-    tft_->WriteStringLen(0, y, 80, str, len);
+    tft_->setFont(&Open_Sans_Condensed_Light_37);
+    tft_->WriteStringLen(0, y, 80, str);
 }
 
 void UIMain::DrawKomootStreet(const IUIKomoot::KomootData_t &data)
 {
     tft_->fillRect(0, Y_KOMMOT_STREET, 80, 160 - Y_KOMMOT_STREET, 0);
     tft_->setFont(&Open_Sans_Condensed_Bold_31);
-    tft_->setTextColor(Adafruit_ST7735::Color565(255, 255, 255));
+    tft_->setTextColor(COLOR_WHITE);
     char street_ascii[20];
     ConvertUtf8toAscii(data.street, strlen((char *)data.street), street_ascii, sizeof(street_ascii));
     tft_->WriteString(0, Y_KOMMOT_STREET, 80, 160 - Y_KOMMOT_STREET, street_ascii);
@@ -394,7 +417,7 @@ void UIMain::DrawKomootStreet(const IUIKomoot::KomootData_t &data)
 
 uint16_t UIMain::GetKomootDirectionColor(uint16_t distance_m)
 {
-    uint16_t color = distance_m <= 100u ? Adafruit_ST7735::Color565(0, 255, 0) : 0xFFFF;
+    uint16_t color = distance_m <= 100u ? COLOR_GREEN : COLOR_WHITE;
     return color;
 }
 
@@ -453,4 +476,69 @@ void UIMain::SetBikeComputer(IBikeComputer *bike_computer)
 {
     bike_computer_ = bike_computer;
     uisettings_.SetBikeComputer(bike_computer);
+}
+
+void UIMain::ToggleCscDisplay()
+{
+    if (IUIMode::eCsc == gui_mode_)
+    {
+        //uint16_t color = last_csc_.is_riding ? COLOR_WHITE : COLOR_WARN;
+
+        switch (csc_toggle_view_)
+        {
+        case eShowTime:
+            csc_toggle_view_ = eShowDist;
+            break;
+        case eShowDist:
+        default:
+            csc_toggle_view_ = eShowTime;
+            break;
+        }
+        DrawCscToggleDisplay(last_csc_, true);
+        event_queue_.call_in(uisettings_.settings_.toggle_sec * 1000u, mbed::callback(this, &UIMain::ToggleCscDisplay));
+    }
+}
+
+void UIMain::DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force)
+{
+    uint16_t color = last_csc_.is_riding ? COLOR_WHITE : COLOR_WARN;
+    uint16_t col2 = 0;
+
+    switch (csc_toggle_view_)
+    {
+    case eShowTime:
+
+        if (force || (last_csc_.average_speed_kmhX10 != data.average_speed_kmhX10))
+        {
+            FLOW("Update, eCsc, average speed: %u\r\n", data.average_speed_kmhX10);
+            DrawAverageSpeed(Y_LINE3, data.average_speed_kmhX10);
+        }
+
+        if (force || (last_csc_.average_cadence != data.average_cadence))
+        {
+            FLOW("Update, eCsc, average_cadence: %u\r\n", data.average_cadence);
+            DrawCadence(0, Y_LINE4, data.average_cadence);
+        }
+
+        break;
+
+    case eShowDist:
+    default:
+
+        if (force || (last_csc_.trip_distance_cm != data.trip_distance_cm))
+        {
+            FLOW("Update, eCsc, trip distance: %u\r\n", data.trip_distance_cm);
+            DrawDistance(Y_LINE3, data.trip_distance_cm / 100, color);
+        }
+
+        if (force || (last_csc_.trip_time_ms != data.trip_time_ms) || (last_csc_.is_riding != data.is_riding))
+        {
+            FLOW("Update, eCsc, trip time: %u\r\n", data.trip_time_ms);
+            DrawTime(Y_LINE4, data.trip_time_ms / 1000, color);
+        }
+        col2 = COLOR_WHITE;
+        break;
+    }
+
+    tft_->fillRect(20, Y_LINE4-8, 60, 3, col2);
 }

@@ -6,8 +6,8 @@
 #include "IUICsc.h"
 #include "events/EventQueue.h"
 
-#define SPEED_FILTER_VALUES_CNT 5u
-#define SPEED_FILTER_VALUES_MAX (SPEED_FILTER_VALUES_CNT-1u)
+#define FILTER_VALUES_CNT 5u
+#define FILTER_VALUES_MAX (FILTER_VALUES_CNT-1u)
 
 class AppCsc
 {
@@ -16,6 +16,8 @@ class AppCsc
     virtual ~AppCsc();
     bool ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len);
     void CalculateAverageSpeed();
+    uint16_t AddFilterVal(uint16_t array[], uint16_t val);
+
 
   //protected:
     typedef struct cscMsg
@@ -32,7 +34,8 @@ class AppCsc
     double wheel_size_cm_;
     uint32_t crank_counter_sum_;
     uint32_t crank_event_sum_;
-    uint16_t filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX];
+    uint16_t filtered_speed_kmhX10_[FILTER_VALUES_MAX];
+    uint16_t filtered_cadence_[FILTER_VALUES_MAX];
     bool is_init_;
 };
 

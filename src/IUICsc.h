@@ -15,6 +15,7 @@ public:
     uint16_t filtered_speed_kmhX10;
     uint16_t average_speed_kmhX10;
     uint16_t cadence;
+    uint16_t filtered_cadence;
     uint16_t average_cadence;
     bool is_riding;
   } CscData_t;

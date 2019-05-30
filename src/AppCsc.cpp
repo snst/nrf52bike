@@ -16,7 +16,7 @@ AppCsc::AppCsc()
 {
     memset(&data_, 0, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));
-    
+    memset(&filtered_cadence_, 0, sizeof(filtered_cadence_));
 }
 
 AppCsc::~AppCsc()
@@ -91,6 +91,8 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
 
             data_.cadence = MIN(cadence, MAX_CADENCE);
             data_.average_cadence = MIN(average_cadence, MAX_CADENCE);
+            uint16_t filtered_cadence = AddFilterVal(filtered_cadence_, data_.cadence);
+            data_.filtered_cadence = MIN(filtered_cadence, MAX_CADENCE);
 
 /*
             INFO("wc=%u, we=%u, dwc=%u, dwe=%u, ms=%u, s=%f, r=%u\r\n",
@@ -130,12 +132,27 @@ void AppCsc::CalculateAverageSpeed()
     }
     data_.average_speed_kmhX10 = MIN(average_speed_kmhX10, MAX_SPEED);
 
+    uint16_t filtered_speed_kmhX10 = AddFilterVal(filtered_speed_kmhX10_, data_.speed_kmhX10);
+    data_.filtered_speed_kmhX10 = MIN(filtered_speed_kmhX10, MAX_SPEED);
+/*
     uint32_t sum = filtered_speed_kmhX10_[0] + data_.speed_kmhX10;
-    for(size_t i=1; i<SPEED_FILTER_VALUES_MAX; i++) {
+    for(size_t i=1; i<FILTER_VALUES_MAX; i++) {
         sum += filtered_speed_kmhX10_[i];
         filtered_speed_kmhX10_[i-1] = filtered_speed_kmhX10_[i];
     }
-    filtered_speed_kmhX10_[SPEED_FILTER_VALUES_MAX-1] = data_.speed_kmhX10;
-    uint16_t filtered_speed_kmhX10 = sum / SPEED_FILTER_VALUES_CNT;
-    data_.filtered_speed_kmhX10 = MIN(filtered_speed_kmhX10, MAX_SPEED);
+    filtered_speed_kmhX10_[FILTER_VALUES_MAX-1] = data_.speed_kmhX10;
+    uint16_t filtered_speed_kmhX10 = sum / FILTER_VALUES_CNT;
+    data_.filtered_speed_kmhX10 = MIN(filtered_speed_kmhX10, MAX_SPEED);*/
+}
+
+uint16_t AppCsc::AddFilterVal(uint16_t array[], uint16_t val)
+{
+    uint32_t sum = array[0] + val;
+    for(size_t i=1; i<FILTER_VALUES_MAX; i++) {
+        sum += array[i];
+        array[i-1] = array[i];
+    }
+    array[FILTER_VALUES_MAX-1] = val;
+    uint16_t ret = sum / FILTER_VALUES_CNT;
+    return ret;
 }

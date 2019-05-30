@@ -178,8 +178,13 @@ void BikeComputer::SetBacklightBrightness(uint8_t val)
     ui_->SetBacklightBrightness(val);
 }
 
-
 uint32_t BikeComputer::GetCscDisconnects()
 {
     return csc_app.GetDisconnects();
+}
+
+bool BikeComputer::IsAppAvailable(BC::eApp_t app_id)
+{
+    BleAppBase* app = GetAppWithId(app_id);
+    return (NULL != app) && (app->FoundDevice());
 }

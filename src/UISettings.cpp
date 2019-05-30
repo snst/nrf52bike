@@ -29,24 +29,26 @@ static void fds_evt_handler(fds_evt_t const *const p_fds_evt)
 }
 
 UISettings::UISettings(GFX *tft)
-    : tft_(tft),                                                                                   //
-      sm_state_(eBat),                                                                             //
-      edit_mode_(false),                                                                           //
-      setting_sm({{eBat, "Bat", false, NULL, eLedOn},                                              //
+    : tft_(tft),                                                                          //
+      sm_state_(eBat),                                                                    //
+      edit_mode_(false),                                                                  //
+      setting_sm({{eBat, "Bat", false, NULL, eLedOn},                                     //
                   {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff},  //
                   {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}, //
-                  {eTime, "Time", true, &UISettings::IncDislayTime, eDist},                        //
-                  {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eAutoSwitch},             //
-                  {eAutoSwitch, "AMode", true, &UISettings::IncAutoSwitch, eLightUp},             //
-                  {eLightUp, "Light", true, &UISettings::IncLightUp, eConnect},                    //
-                  {eConnect, "Conn", true, &UISettings::Connect, eSave},                           //
-                  {eSave, "Save", true, &UISettings::SaveSettings, eExit},                         //
+                  {eTime, "Time", true, &UISettings::IncDislayTime, eDist},               //
+                  {eDist, "Dist", true, &UISettings::IncKomootAlertDist, eAutoSwitch},    //
+                  {eAutoSwitch, "AMode", true, &UISettings::IncAutoSwitch, eLightUp},     //
+                  {eLightUp, "Light", true, &UISettings::IncLightUp, eToggleSec},         //
+                  {eToggleSec, "Tsec", true, &UISettings::IncToggleSec, eConnect},        //
+                  {eConnect, "Conn", true, &UISettings::Connect, eSave},                  //
+                  {eSave, "Save", true, &UISettings::SaveSettings, eExit},                //
                   {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}})
 {
     settings_.display_brightness_on = 7;
     settings_.display_brightness_off = 9;
     settings_.display_time = 10;
     settings_.komoot_alert_dist = 400;
+    settings_.toggle_sec = 4;
 
     ret_code_t ret = fds_register(fds_evt_handler);
     if (ret == FDS_SUCCESS)
@@ -169,6 +171,11 @@ void UISettings::IncDislayTime()
     settings_.display_time = (settings_.display_time < 30) ? (settings_.display_time + 2) : 2;
 }
 
+void UISettings::IncToggleSec()
+{
+    settings_.toggle_sec = (settings_.toggle_sec < 10) ? (settings_.toggle_sec + 1) : 1;
+}
+
 void UISettings::IncKomootAlertDist()
 {
     settings_.komoot_alert_dist = (settings_.komoot_alert_dist < 500) ? (settings_.komoot_alert_dist + 50) : 50;
@@ -212,6 +219,9 @@ void UISettings::Draw()
         break;
     case eLightUp:
         len = sprintf(str, "%s", settings_.light_up ? "on" : "off");
+        break;
+    case eToggleSec:
+        len = sprintf(str, "%i s", settings_.toggle_sec);
         break;
     case eConnect:
         len = sprintf(str, "%u", bike_computer_->GetCscDisconnects());
@@ -283,4 +293,9 @@ SmEntry_t *UISettings::GetStateEntry(eSmState state)
 void UISettings::SetBikeComputer(IBikeComputer *bike_computer)
 {
     bike_computer_ = bike_computer;
+}
+
+void UISettings::SystemOff()
+{
+    //sd_power_system_off();
 }
