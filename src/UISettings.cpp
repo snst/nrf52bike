@@ -1,7 +1,7 @@
 #include "UISettings.h"
 #include "gfxfont.h"
 #include "../font/Open_Sans_Condensed_Bold_31.h"
-#include "../font/Open_Sans_Condensed_Bold_49.h"
+#include "../font/Open_Sans_Condensed_Bold_22.h"
 #include "common.h"
 #include "fds.h"
 #include "tracer.h"
@@ -30,9 +30,9 @@ static void fds_evt_handler(fds_evt_t const *const p_fds_evt)
 
 UISettings::UISettings(GFX *tft)
     : tft_(tft),                                                                          //
-      sm_state_(eBat),                                                                    //
+      sm_state_(eStatus),                                                                 //
       edit_mode_(false),                                                                  //
-      setting_sm({{eBat, "Bat", false, NULL, eLedOn},                                     //
+      setting_sm({{eStatus, "Status", false, &UISettings::LeaveSettings, eLedOn},                               //
                   {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff},  //
                   {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}, //
                   {eTime, "Time", true, &UISettings::IncDislayTime, eDist},               //
@@ -42,7 +42,7 @@ UISettings::UISettings(GFX *tft)
                   {eToggleSec, "Tsec", true, &UISettings::IncToggleSec, eConnect},        //
                   {eConnect, "Conn", true, &UISettings::Connect, eSave},                  //
                   {eSave, "Save", true, &UISettings::SaveSettings, eExit},                //
-                  {eExit, "Exit", false, &UISettings::LeaveSettings, eBat}})
+                  {eExit, "Exit", false, &UISettings::LeaveSettings, eStatus}})
 {
     settings_.display_brightness_on = 7;
     settings_.display_brightness_off = 9;
@@ -130,11 +130,11 @@ void UISettings::LoadSettings()
 
 void UISettings::LeaveSettings()
 {
-    sm_state_ = eLedOn;
+    sm_state_ = eStatus;
     bike_computer_->SetUiMode(IUIMode::eCsc);
 }
 
-void UISettings::LongPress()
+void UISettings::HandleLongPress()
 {
     HandleEvent(eLong);
 }
@@ -192,55 +192,64 @@ void UISettings::Draw()
 {
     tft_->fillScreen(ST77XX_BLACK);
     SmEntry_t *entry = GetStateEntry(sm_state_);
-    tft_->setFont(&Open_Sans_Condensed_Bold_31);
+    tft_->setFont(&Open_Sans_Condensed_Bold_22);
     tft_->setTextColor(edit_mode_ ? Adafruit_ST7735::Color565(255, 0, 0) : 0xFFFF);
     tft_->WriteStringLen(0, 15, 80, entry->name, -1, 0, GFX::eCenter);
+    tft_->setTextColor(0xFFFF);
+
     char str[10];
+    char *str_val = str;
     int16_t len;
     switch (sm_state_)
     {
-    case eBat:
-        len = sprintf(str, "%i %%", csc_bat_);
-        break;
+    case eStatus:
+    {
+        sprintf(str, "csc %i %%", bike_computer_->GetCscBat());
+        tft_->WriteStringLen(0, 40, 80, str, -1, 0, GFX::eCenter);
+        sprintf(str, "bc %i V", 0);
+        tft_->WriteStringLen(0, 70, 80, str, -1, 0, GFX::eCenter);
+        uint16_t max = bike_computer_->GetCscData()->max_speed_kmhX10;
+        sprintf(str, "max %i.%i", max / 10, max % 10);
+        tft_->WriteStringLen(0, 100, 80, str, -1, 0, GFX::eCenter);
+        sprintf(str, "cad %u", bike_computer_->GetCscData()->average_cadence);
+        tft_->WriteStringLen(0, 130, 80, str, -1, 0, GFX::eCenter);
+
+        str_val = NULL;
+    }
+    break;
     case eLedOn:
-        len = sprintf(str, "%i", settings_.display_brightness_on);
+        sprintf(str, "%i", settings_.display_brightness_on);
         break;
     case eLedOff:
-        len = sprintf(str, "%i", settings_.display_brightness_off);
+        sprintf(str, "%i", settings_.display_brightness_off);
         break;
     case eTime:
-        len = sprintf(str, "%i s", settings_.display_time);
+        sprintf(str, "%i s", settings_.display_time);
         break;
     case eDist:
-        len = sprintf(str, "%i m", settings_.komoot_alert_dist);
+        sprintf(str, "%i m", settings_.komoot_alert_dist);
         break;
     case eAutoSwitch:
-        len = sprintf(str, "%s", settings_.auto_switch ? "on" : "off");
+        sprintf(str, "%s", settings_.auto_switch ? "on" : "off");
         break;
     case eLightUp:
-        len = sprintf(str, "%s", settings_.light_up ? "on" : "off");
+        sprintf(str, "%s", settings_.light_up ? "on" : "off");
         break;
     case eToggleSec:
-        len = sprintf(str, "%i s", settings_.toggle_sec);
+        sprintf(str, "%i s", settings_.toggle_sec);
         break;
     case eConnect:
-        len = sprintf(str, "%u", bike_computer_->GetCscDisconnects());
+        sprintf(str, "%u", bike_computer_->GetCscDisconnects());
         break;
     default:
-        len = 0;
+        str_val = NULL;
         break;
     }
 
-    if (0 < len)
+    if (NULL != str_val)
     {
-        tft_->setTextColor(0xFFFF);
-        tft_->WriteStringLen(0, 50, 80, str, len, 0, GFX::eCenter);
+        tft_->WriteStringLen(0, 40, 80, str_val, -1, 0, GFX::eCenter);
     }
-}
-
-void UISettings::UpdateCscBat(uint8_t val)
-{
-    csc_bat_ = val;
 }
 
 void UISettings::HandleEvent(eSmEvent ev)

@@ -134,6 +134,7 @@ void AppCsc::CalculateAverageSpeed()
 
     uint16_t filtered_speed_kmhX10 = AddFilterVal(filtered_speed_kmhX10_, data_.speed_kmhX10);
     data_.filtered_speed_kmhX10 = MIN(filtered_speed_kmhX10, MAX_SPEED);
+    data_.max_speed_kmhX10 = MAX(data_.max_speed_kmhX10, data_.filtered_speed_kmhX10);
 /*
     uint32_t sum = filtered_speed_kmhX10_[0] + data_.speed_kmhX10;
     for(size_t i=1; i<FILTER_VALUES_MAX; i++) {

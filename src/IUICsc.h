@@ -14,6 +14,7 @@ public:
     uint16_t speed_kmhX10;
     uint16_t filtered_speed_kmhX10;
     uint16_t average_speed_kmhX10;
+    uint16_t max_speed_kmhX10;
     uint16_t cadence;
     uint16_t filtered_cadence;
     uint16_t average_cadence;
@@ -29,7 +30,6 @@ public:
   } ConState_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;
-  virtual void UpdateCscBat(uint8_t val) = 0;
   virtual void UpdateCscConnState(ConState_t state) = 0;
 };
 

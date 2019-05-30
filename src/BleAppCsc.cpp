@@ -9,6 +9,7 @@ BleAppCsc::BleAppCsc(events::EventQueue &event_queue, BLE &ble_interface, IUICsc
     : BleAppBase(event_queue, ble_interface, "CSC", BC::eCsc)
     , ui_(ui)
     , disconnect_cnt_(0)
+    , battery_(0)
 {
     FindCharacteristic(0x2A5B);
 }
@@ -32,11 +33,11 @@ void BleAppCsc::OnDataRead(const GattReadCallbackParams *params)
 {
     if (1 == params->len)
     {
-        INFO("BAT: %d\r\n", params->data[0]);
+        battery_ = params->data[0];
+        INFO("BAT: %d\r\n", battery_);
         char str[15];
-        sprintf(str, "\n\nBattery: %d\n", params->data[0]);
+        sprintf(str, "\n\nBattery: %d\n", battery_);
         UILog(str);
-        ui_->UpdateCscBat(params->data[0]);
     }
 }
 
@@ -63,4 +64,9 @@ bool BleAppCsc::Connect()
 uint32_t BleAppCsc::GetDisconnects()
 {
     return disconnect_cnt_;
+}
+
+uint8_t BleAppCsc::GetBatteryPercent()
+{
+    return battery_;
 }

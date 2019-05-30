@@ -7,7 +7,7 @@
 
 typedef enum eSmState
 {
-    eBat,
+    eStatus,
     eLedOn,
     eLedOff,
     eTime,
@@ -45,7 +45,7 @@ class UISettings
 {
 public:
     UISettings(GFX *tft);
-    void LongPress();
+    void HandleLongPress();
     void ShortPress();
     void IncBrightnessDisplayOn();
     void IncBrightnessDisplayOff();
@@ -58,14 +58,12 @@ public:
     void LoadSettings();
     void Draw();
     void SystemOff();
-    void UpdateCscBat(uint8_t val);
     void HandleEvent(eSmEvent ev);
     void LeaveSettings();
     void Connect();
     SmEntry_t *GetStateEntry(eSmState state);
     void SetBikeComputer(IBikeComputer *bike_computer);
 
-    uint8_t csc_bat_;
     GFX *tft_;
     eSmState_t sm_state_;
     bool edit_mode_;

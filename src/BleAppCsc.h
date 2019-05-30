@@ -17,11 +17,13 @@ class BleAppCsc : public BleAppBase
     virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
     virtual bool Connect();
     uint32_t GetDisconnects();
+    uint8_t GetBatteryPercent();
 
   protected:
     AppCsc csc_;
     IUICsc* ui_;
     uint32_t disconnect_cnt_;
+    uint8_t battery_;
 };
 
 #endif

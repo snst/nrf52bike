@@ -188,3 +188,13 @@ bool BikeComputer::IsAppAvailable(BC::eApp_t app_id)
     BleAppBase* app = GetAppWithId(app_id);
     return (NULL != app) && (app->FoundDevice());
 }
+
+uint8_t BikeComputer::GetCscBat()
+{
+    return csc_app.GetBatteryPercent();
+}
+
+IUICsc::CscData_t* BikeComputer::GetCscData()
+{
+    return &ui_->last_csc_;
+}

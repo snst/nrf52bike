@@ -42,7 +42,6 @@ class CscTestData : public IUICsc
   public:
     CscTestData() {}
     virtual void Update(const CscData_t& data, bool force) {}
-    virtual void UpdateCscBat(uint8_t val) {}
 };
 
 TEST(CSC, ProcessData)
@@ -162,7 +161,7 @@ TEST(UISettings, test1)
     events::EventQueue eq;
     UIMain ui(&tft, eq);
     UISettings s(&tft, &ui);
-    s.LongPress();
+    s.HandleLongPress();
     s.HandleEvent(eShort);
     s.HandleEvent(eShort);
     s.HandleEvent(eShort);

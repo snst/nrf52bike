@@ -33,6 +33,8 @@ public:
   virtual void SetBacklightBrightness(uint8_t val);
   virtual uint32_t GetCscDisconnects();
   virtual bool IsAppAvailable(BC::eApp_t app_id);
+  virtual uint8_t GetCscBat();
+  virtual IUICsc::CscData_t* GetCscData();
 
 
 protected:

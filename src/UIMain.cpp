@@ -19,11 +19,15 @@ IUILog *uilog = NULL;
 #define Y_KOMMOT_DISTANCE (62u)
 #define Y_KOMMOT_STREET (105)
 
-
 PwmOut display_led((PinName)11);
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
-    : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup), komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false), last_distance_bar_(0xFF), last_direction_color_(0), longpress_handled_(false), uisettings_(tft), led_event_id_(0), ignore_touch_up_(false), switched_to_komoot_100_(false), switched_to_komoot_500_(false), csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0)
+    : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup),           //
+      komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false),       //
+      last_distance_bar_(0xFF), last_direction_color_(0), touch_consumed_(true), //
+      uisettings_(tft), led_event_id_(0), ignore_touch_up_(false),                  //
+      switched_to_komoot_100_(false), switched_to_komoot_500_(false),               //
+      csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(COLOR_WHITE);
@@ -38,16 +42,15 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
     memset(&last_komoot_, 0, sizeof(last_komoot_));
 }
 
-#define LONGPRESS_MS (500u)
+#define LONGPRESS_MS (1000u)
 
-void UIMain::LongPress()
+void UIMain::HandleLongPress()
 {
-    //    INFO("LONGPRESS EVENT\r\n");
-    longpress_handled_ = true;
+    touch_consumed_ = true;
     switch (gui_mode_)
     {
     case IUIMode::eSettings:
-        uisettings_.LongPress();
+        uisettings_.HandleLongPress();
         break;
     default:
         SetUiMode(IUIMode::eSettings);
@@ -55,13 +58,38 @@ void UIMain::LongPress()
     }
 }
 
+void UIMain::HandleShortPress()
+{
+    switch (gui_mode_)
+    {
+    default:
+    case IUIMode::eStartup:
+        SetUiMode(IUIMode::eCsc);
+        break;
+    case IUIMode::eKomoot:
+        if (bike_computer_->IsAppAvailable(BC::eCsc))
+        {
+            SetUiMode(IUIMode::eCsc);
+        }
+        break;
+    case IUIMode::eCsc:
+        if (bike_computer_->IsAppAvailable(BC::eKomoot))
+        {
+            SetUiMode(IUIMode::eKomoot);
+        }
+        break;
+    case IUIMode::eSettings:
+        uisettings_.ShortPress();
+        break;
+    }
+}
+
 void UIMain::TouchDown()
 {
-    ignore_touch_up_ = (0 == led_event_id_);
     //INFO("D\r\n");
-    touch_down_ms_ = GetMillis();
-    longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::LongPress));
-    longpress_handled_ = false;
+    ignore_touch_up_ = (0 == led_event_id_);
+    longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress));
+    touch_consumed_ = false;
     SetBacklightOn();
 }
 
@@ -72,39 +100,15 @@ bool UIMain::IgnoreShortTouchUp()
 
 void UIMain::TouchUp()
 {
-    if (!longpress_handled_)
+    if (!touch_consumed_) // => short press
     {
+        touch_consumed_ = true;
         event_queue_.cancel(longpress_id_);
 
         if (!IgnoreShortTouchUp())
         {
-            switch (gui_mode_)
-            {
-            default:
-            case IUIMode::eStartup:
-                SetUiMode(IUIMode::eCsc);
-                break;
-            case IUIMode::eKomoot:
-                if (bike_computer_->IsAppAvailable(BC::eCsc))
-                {
-                    SetUiMode(IUIMode::eCsc);
-                }
-                break;
-            case IUIMode::eCsc:
-                if (bike_computer_->IsAppAvailable(BC::eKomoot))
-                {
-                    SetUiMode(IUIMode::eKomoot);
-                }
-                break;
-            case IUIMode::eSettings:
-                uisettings_.ShortPress();
-                break;
-            }
+            event_queue_.call(mbed::callback(this, &UIMain::HandleShortPress));
         }
-    }
-    else
-    {
-        //        INFO("LONGPRESS UP\r\n");
     }
 }
 
@@ -127,12 +131,13 @@ void UIMain::Update(const IUICsc::CscData_t &data, bool force)
             FLOW("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
             DrawSpeed(Y_LINE1, data.filtered_speed_kmhX10);
         }
-        /*
+        
         if (force || (last_csc_.average_speed_kmhX10 != data.average_speed_kmhX10))
         {
             INFO("Update, eCsc, average speed: %u\r\n", data.average_speed_kmhX10);
             DrawAverageSpeed(Y_LINE3, data.average_speed_kmhX10);
-        }*/
+        }
+        
         if (force || (last_csc_.cadence != data.cadence))
         {
             FLOW("Update, eCsc, cadence: %u\r\n", data.cadence);
@@ -286,7 +291,7 @@ void UIMain::SetUiMode(IUIMode::eUiMode_t mode)
             Update(last_komoot_, true);
             break;
         case IUIMode::eCsc:
-            csc_toggle_view_ = eShowDist;
+            csc_toggle_view_ = eView2;
             Update(last_csc_, true);
             DrawCscConnState();
             event_queue_.call_in(uisettings_.settings_.toggle_sec * 1000u, mbed::callback(this, &UIMain::ToggleCscDisplay));
@@ -355,7 +360,7 @@ void UIMain::DrawSpeed(uint16_t y, uint16_t speed_kmhX10, uint16_t color)
 
     sprintf(str, " %i", speed_kmhX10 % 10);
     tft_->setFont(&Open_Sans_Condensed_Light_37);
-    tft_->WriteStringLen(80-18, y + 0, 18, str, -1, 0, GFX::eLeft);
+    tft_->WriteStringLen(80 - 18, y + 0, 18, str, -1, 0, GFX::eLeft);
 
     sprintf(str, "%i", speed_kmhX10 / 10);
     tft_->setFont(&Open_Sans_Condensed_Bold_49);
@@ -431,11 +436,6 @@ void UIMain::DrawKomootDirection(const IUIKomoot::KomootData_t &data)
     }
 }
 
-void UIMain::UpdateCscBat(uint8_t val)
-{
-    uisettings_.UpdateCscBat(val);
-}
-
 void UIMain::SetBacklightOff()
 {
     led_event_id_ = 0;
@@ -486,12 +486,12 @@ void UIMain::ToggleCscDisplay()
 
         switch (csc_toggle_view_)
         {
-        case eShowTime:
-            csc_toggle_view_ = eShowDist;
+        case eView1:
+            csc_toggle_view_ = eView2;
             break;
-        case eShowDist:
+        case eView2:
         default:
-            csc_toggle_view_ = eShowTime;
+            csc_toggle_view_ = eView1;
             break;
         }
         DrawCscToggleDisplay(last_csc_, true);
@@ -506,13 +506,14 @@ void UIMain::DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force)
 
     switch (csc_toggle_view_)
     {
-    case eShowTime:
-
+    case eView1:
+/*
         if (force || (last_csc_.average_speed_kmhX10 != data.average_speed_kmhX10))
         {
             FLOW("Update, eCsc, average speed: %u\r\n", data.average_speed_kmhX10);
             DrawAverageSpeed(Y_LINE3, data.average_speed_kmhX10);
         }
+
 
         if (force || (last_csc_.average_cadence != data.average_cadence))
         {
@@ -520,25 +521,40 @@ void UIMain::DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force)
             DrawCadence(0, Y_LINE4, data.average_cadence);
         }
 
-        break;
-
-    case eShowDist:
-    default:
 
         if (force || (last_csc_.trip_distance_cm != data.trip_distance_cm))
         {
             FLOW("Update, eCsc, trip distance: %u\r\n", data.trip_distance_cm);
-            DrawDistance(Y_LINE3, data.trip_distance_cm / 100, color);
+            DrawDistance(Y_LINE4, data.trip_distance_cm / 100, color);
         }
+*/
 
         if (force || (last_csc_.trip_time_ms != data.trip_time_ms) || (last_csc_.is_riding != data.is_riding))
         {
             FLOW("Update, eCsc, trip time: %u\r\n", data.trip_time_ms);
             DrawTime(Y_LINE4, data.trip_time_ms / 1000, color);
+        }        
+
+        break;
+
+    case eView2:
+    default:
+/*
+        if (force || (last_csc_.trip_time_ms != data.trip_time_ms) || (last_csc_.is_riding != data.is_riding))
+        {
+            FLOW("Update, eCsc, trip time: %u\r\n", data.trip_time_ms);
+            DrawTime(Y_LINE3, data.trip_time_ms / 1000, color);
         }
+*/
+        if (force || (last_csc_.trip_distance_cm != data.trip_distance_cm))
+        {
+            FLOW("Update, eCsc, trip distance: %u\r\n", data.trip_distance_cm);
+            DrawDistance(Y_LINE4, data.trip_distance_cm / 100, color);
+        }
+
         col2 = COLOR_WHITE;
         break;
     }
 
-    tft_->fillRect(20, Y_LINE4-8, 60, 3, col2);
+    //tft_->fillRect(20, Y_LINE4 - 8, 60, 3, col2);
 }

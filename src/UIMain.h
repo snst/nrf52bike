@@ -22,7 +22,6 @@ public:
   UIMain(GFX *tft, events::EventQueue &event_queue);
   virtual void Update(const IUICsc::CscData_t &data, bool force);
   virtual void Update(const IUIKomoot::KomootData_t &data, bool force);
-  virtual void UpdateCscBat(uint8_t val);
   virtual void Log(const char *str);
   virtual void UpdateCscConnState(ConState_t state);
   void SetOperational();
@@ -36,7 +35,7 @@ public:
   void DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force);
 
   typedef enum eCscToggleDisplay {
-    eShowDist, eShowTime
+    eView2, eView1
   } eCscToggleDisplay_t;
 
   eCscToggleDisplay_t csc_toggle_view_;
@@ -59,16 +58,16 @@ public:
   void SetCadenceColor(uint16_t cadence);
   uint16_t GetKomootDirectionColor(uint16_t distance_m);
   bool IgnoreShortTouchUp();
-  void LongPress();
+  void HandleLongPress();
+  void HandleShortPress();
   void DrawSettings();
   uint8_t komoot_view_;
   uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
   bool enable_komoot_switch_;
   bool switched_to_csc_;
-  uint32_t touch_down_ms_;
   int longpress_id_;
-  bool longpress_handled_;
+  bool touch_consumed_;
   void IncBrightnessDisplayOn();
   void IncBrightnessDisplayOff();
   int led_event_id_;
