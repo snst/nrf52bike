@@ -8,6 +8,9 @@
 #include "../font/Open_Sans_Condensed_Bold_37.h"
 #include "common.h"
 
+//AnalogIn   ain(p5);
+
+
 //DigitalOut display_led((PinName)11);
 IUILog *uilog = NULL;
 
@@ -60,6 +63,7 @@ void UIMain::HandleLongPress()
 
 void UIMain::HandleShortPress()
 {
+    INFO("UIMain::HandleShortPress() %i %i\r\n", bike_computer_->IsAppAvailable(BC::eCsc), bike_computer_->IsAppAvailable(BC::eKomoot));
     switch (gui_mode_)
     {
     default:
@@ -115,6 +119,7 @@ void UIMain::TouchUp()
 void UIMain::Update(const IUICsc::CscData_t &data, bool force)
 {
     FLOW("UIMain::Update(CSC), force=%d\r\n", force);
+    //INFO("Ain %f\r\n", ain.read());
     SetOperational();
 
     if (!force && (0 != csc_watchdog_event_id_))

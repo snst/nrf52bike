@@ -49,6 +49,7 @@ public:
   void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event);
   void Start();
   bool IsSameId128(const uint8_t *a, const uint8_t *b);
+  bool IsScanActive();
 
 protected:
   events::EventQueue &event_queue_;

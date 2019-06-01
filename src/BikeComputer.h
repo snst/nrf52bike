@@ -35,6 +35,9 @@ public:
   virtual bool IsAppAvailable(BC::eApp_t app_id);
   virtual uint8_t GetCscBat();
   virtual IUICsc::CscData_t* GetCscData();
+  void ConnectCsc();
+  void ConnectKomoot();
+  void StopScan();
 
 
 protected:

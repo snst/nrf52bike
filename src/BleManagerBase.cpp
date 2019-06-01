@@ -109,6 +109,11 @@ void BleManagerBase::StopScan()
     }
 }
 
+bool BleManagerBase::IsScanActive()
+{
+    return scanning_active_;
+}
+
 void BleManagerBase::OnInitDone()
 {
     INFO("~BleManagerBase::OnInitDone()\r\n");

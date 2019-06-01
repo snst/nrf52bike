@@ -13,7 +13,6 @@
 Serial pc(USBTX, USBRX);
 InterruptIn touch(P0_26);
 
-
 int main(void)
 {
     INFO("+main()\r\n");
