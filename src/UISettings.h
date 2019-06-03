@@ -7,6 +7,7 @@
 
 typedef enum eSmState
 {
+    eInactive,
     eStatus,
     eLedOn,
     eLedOff,
@@ -63,6 +64,9 @@ public:
     void Connect();
     SmEntry_t *GetStateEntry(eSmState state);
     void SetBikeComputer(IBikeComputer *bike_computer);
+    void CalculateBat(float &volt, uint8_t &percent);
+    void UpdateBat();
+    void Activate();
 
     GFX *tft_;
     eSmState_t sm_state_;

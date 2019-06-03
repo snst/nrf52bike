@@ -115,13 +115,24 @@ void UIMain::TouchUp()
         }
     }
 }
-
+/*
+void CalculateBat(float &volt, uint8_t percent)
+{
+    float raw = ain.read();
+    volt = 4.2f / 0.177f * raw;
+    float per = (100.0 / 0.7f) * (volt - 3.5f);
+    percent = per > 0.0f ? (uint8_t) per : 0;
+    INFO("Bat raw=%f, volt=%f, percent=%u\r\n", raw, volt, percent);
+}
+*/
 void UIMain::Update(const IUICsc::CscData_t &data, bool force)
 {
     FLOW("UIMain::Update(CSC), force=%d\r\n", force);
-    //INFO("Ain %f\r\n", ain.read());
     SetOperational();
-
+/*    float volt;
+    uint8_t percent;
+    CalculateBat(volt, percent);
+*/
     if (!force && (0 != csc_watchdog_event_id_))
     {
         event_queue_.cancel(csc_watchdog_event_id_);
@@ -302,7 +313,7 @@ void UIMain::SetUiMode(IUIMode::eUiMode_t mode)
             event_queue_.call_in(uisettings_.settings_.toggle_sec * 1000u, mbed::callback(this, &UIMain::ToggleCscDisplay));
             break;
         case IUIMode::eSettings:
-            uisettings_.Draw();
+            uisettings_.Activate();
             break;
         default:
             break;
@@ -473,7 +484,7 @@ void UIMain::OnCscWatchdog()
     UpdateCscConnState(IUICsc::eOffline);
     if (NULL != bike_computer_)
     {
-        bike_computer_->Connect(BC::eCsc);
+        bike_computer_->Connect(BC::eCsc, 500);
     }
 }
 

@@ -11,8 +11,9 @@
 #define MAX_CADENCE (199u)
 #define MAX_TIME (((99u*3600u)+(99u*60u)+59u) *1000u)
 
+// 211.4f
 AppCsc::AppCsc()
-    : is_init_(false), wheel_size_cm_(211.4f), crank_event_sum_(0), crank_counter_sum_(0)
+    : is_init_(false), wheel_size_cm_(214.0f), crank_event_sum_(0), crank_counter_sum_(0)
 {
     memset(&data_, 0, sizeof(data_));
     memset(&filtered_speed_kmhX10_, 0, sizeof(filtered_speed_kmhX10_));
@@ -108,7 +109,7 @@ bool AppCsc::ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len)
             static uint8_t k=0;
             INFO("[%i]now: %ums, diff=%ums, %f kmh, cadence=%u/min, time=%u\r\n", k++, now_ms, delta_ms, data_.speed_kmhX10 / 10.0f, (uint16_t)data_.cadence, data_.trip_time_ms / 1000);
 
-            uint32_t trip_distance_cm = (uint32_t)(wheel_size_cm_ * data_.total_wheel_rounds);
+            uint32_t trip_distance_cm = (uint32_t)(data_.total_wheel_rounds * wheel_size_cm_);
             data_.trip_distance_cm = MIN(trip_distance_cm, MAX_DISTANCE);
 
             CalculateAverageSpeed();

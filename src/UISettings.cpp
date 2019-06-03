@@ -10,6 +10,8 @@
 #define FILE_ID 0x1111
 #define REC_KEY 0x2222
 
+AnalogIn ain(p5);
+
 static void fds_evt_handler(fds_evt_t const *const p_fds_evt)
 {
     switch (p_fds_evt->id)
@@ -32,7 +34,7 @@ UISettings::UISettings(GFX *tft)
     : tft_(tft),                                                                          //
       sm_state_(eStatus),                                                                 //
       edit_mode_(false),                                                                  //
-      setting_sm({{eStatus, "Status", false, &UISettings::LeaveSettings, eLedOn},                               //
+      setting_sm({{eStatus, "Status", false, &UISettings::LeaveSettings, eLedOn},         //
                   {eLedOn, "LedOn", true, &UISettings::IncBrightnessDisplayOn, eLedOff},  //
                   {eLedOff, "LedOff", true, &UISettings::IncBrightnessDisplayOff, eTime}, //
                   {eTime, "Time", true, &UISettings::IncDislayTime, eDist},               //
@@ -130,7 +132,7 @@ void UISettings::LoadSettings()
 
 void UISettings::LeaveSettings()
 {
-    sm_state_ = eStatus;
+    sm_state_ = eInactive;
     bike_computer_->SetUiMode(IUIMode::eCsc);
 }
 
@@ -183,9 +185,27 @@ void UISettings::IncKomootAlertDist()
 
 void UISettings::Connect()
 {
-    bike_computer_->Connect(BC::eCsc);
-    bike_computer_->Connect(BC::eKomoot);
+    bike_computer_->Connect(BC::eCsc, 500);
+    bike_computer_->Connect(BC::eKomoot, 1500);
     edit_mode_ = false;
+}
+
+void UISettings::UpdateBat()
+{
+    if (eStatus == sm_state_)
+    {
+        float volt;
+        uint8_t percent;
+        CalculateBat(volt, percent);
+
+        tft_->setFont(&Open_Sans_Condensed_Bold_22);
+        tft_->setTextColor(0xFFFF);
+        char str[10];
+        sprintf(str, "bc %u %%", percent);
+        tft_->WriteStringLen(0, 70, 80, str, -1, 0, GFX::eCenter);
+
+        bike_computer_->GetEventQueue()->call_in(1000, mbed::callback(this, &UISettings::UpdateBat));
+    }
 }
 
 void UISettings::Draw()
@@ -206,15 +226,15 @@ void UISettings::Draw()
     {
         sprintf(str, "csc %i %%", bike_computer_->GetCscBat());
         tft_->WriteStringLen(0, 40, 80, str, -1, 0, GFX::eCenter);
-        sprintf(str, "bc %i V", 0);
-        tft_->WriteStringLen(0, 70, 80, str, -1, 0, GFX::eCenter);
+        //        sprintf(str, "bc %u %%", percent);
+        //        tft_->WriteStringLen(0, 70, 80, str, -1, 0, GFX::eCenter);
         uint16_t max = bike_computer_->GetCscData()->max_speed_kmhX10;
         sprintf(str, "max %i.%i", max / 10, max % 10);
         tft_->WriteStringLen(0, 100, 80, str, -1, 0, GFX::eCenter);
         sprintf(str, "cad %u", bike_computer_->GetCscData()->average_cadence);
         tft_->WriteStringLen(0, 130, 80, str, -1, 0, GFX::eCenter);
-
         str_val = NULL;
+        UpdateBat();
     }
     break;
     case eLedOn:
@@ -307,4 +327,19 @@ void UISettings::SetBikeComputer(IBikeComputer *bike_computer)
 void UISettings::SystemOff()
 {
     //sd_power_system_off();
+}
+
+void UISettings::CalculateBat(float &volt, uint8_t &percent)
+{
+    float raw = ain.read();
+    volt = 4.2f / 0.177f * raw;
+    float per = (100.0 / 0.7f) * (volt - 3.5f);
+    percent = per > 0.0f ? (uint8_t)per : 0;
+    INFO("Bat raw=%f, volt=%f, percent=%u\r\n", raw, volt, percent);
+}
+
+void UISettings::Activate()
+{
+    sm_state_ = eStatus;
+    Draw();
 }

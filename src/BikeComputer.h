@@ -26,7 +26,7 @@ public:
   void CheckScanStop();
   std::vector<BleAppBase*> apps_;
   
-  virtual void Connect(BC::eApp_t app_id);  
+  virtual void Connect(BC::eApp_t app_id, uint32_t delay);  
   BleAppBase* GetAppWithId(BC::eApp_t app_id);
 
   virtual void SetUiMode(IUIMode::eUiMode_t mode);
@@ -35,9 +35,8 @@ public:
   virtual bool IsAppAvailable(BC::eApp_t app_id);
   virtual uint8_t GetCscBat();
   virtual IUICsc::CscData_t* GetCscData();
-  void ConnectCsc();
-  void ConnectKomoot();
   void StopScan();
+  virtual events::EventQueue* GetEventQueue();
 
 
 protected:
