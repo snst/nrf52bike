@@ -30,7 +30,7 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
       last_distance_bar_(0xFF), last_direction_color_(0), touch_consumed_(true), //
       uisettings_(tft), led_event_id_(0), ignore_touch_up_(false),                  //
       switched_to_komoot_100_(false), switched_to_komoot_500_(false),               //
-      csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0)
+      csc_conn_state_(eDisconnected), csc_watchdog_event_id_(0), longpress_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(COLOR_WHITE);
@@ -50,14 +50,17 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 void UIMain::HandleLongPress()
 {
     touch_consumed_ = true;
-    switch (gui_mode_)
-    {
-    case IUIMode::eSettings:
-        uisettings_.HandleLongPress();
-        break;
-    default:
-        SetUiMode(IUIMode::eSettings);
-        break;
+    if (0 != longpress_id_) {
+        longpress_id_ = 0;
+        switch (gui_mode_)
+        {
+        case IUIMode::eSettings:
+            uisettings_.HandleLongPress();
+            break;
+        default:
+            SetUiMode(IUIMode::eSettings);
+            break;
+        }
     }
 }
 
@@ -92,7 +95,9 @@ void UIMain::TouchDown()
 {
     //INFO("D\r\n");
     ignore_touch_up_ = (0 == led_event_id_);
-    longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress));
+    if (0 == longpress_id_) {
+        longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress));
+    }
     touch_consumed_ = false;
     SetBacklightOn();
 }
@@ -107,7 +112,10 @@ void UIMain::TouchUp()
     if (!touch_consumed_) // => short press
     {
         touch_consumed_ = true;
-        event_queue_.cancel(longpress_id_);
+        if (0 != longpress_id_) {
+            event_queue_.cancel(longpress_id_);
+            longpress_id_ = 0;
+        }
 
         if (!IgnoreShortTouchUp())
         {
@@ -419,8 +427,14 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
 {
     char str[10];
     //trip_distance_m = 144440;
+    //trip_distance_m = 44544;
     uint16_t km = trip_distance_m / 1000;
-    sprintf(str, "%i.%i", km, (trip_distance_m % 1000) / 100);
+    if (trip_distance_m < 100000) {
+        sprintf(str, "%i.%.2i", km, (trip_distance_m % 1000) / 10);
+    } else {
+        sprintf(str, "%i.%i", km, (trip_distance_m % 1000) / 100);
+    }
+
     tft_->setTextColor(color);
     tft_->setFont(&Open_Sans_Condensed_Light_37);
     tft_->WriteStringLen(0, y, 80, str);
@@ -572,5 +586,5 @@ void UIMain::DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force)
         break;
     }
 
-    //tft_->fillRect(20, Y_LINE4 - 8, 60, 3, col2);
+    tft_->fillRect(0, Y_LINE4 - 6, 80, 2, col2);
 }

@@ -12,6 +12,8 @@
 #define MAX_TIME (((99u * 3600u) + (99u * 60u) + 59u) * 1000u)
 
 // 211.4f
+// 214
+// 212
 AppCsc::AppCsc()
     : is_init_(false), wheel_size_cm_(214.0f), crank_event_sum_(0), crank_counter_sum_(0)
 {
