@@ -67,7 +67,7 @@ public:
     void CalculateBat(float &volt, uint8_t &percent);
     void UpdateBat();
     void Activate();
-
+protected:
     GFX *tft_;
     eSmState_t sm_state_;
     bool edit_mode_;
@@ -85,8 +85,9 @@ public:
         uint8_t toggle_sec;
     } SettingsData_t;
 
-    SettingsData_t settings_;
     IBikeComputer* bike_computer_;
+public:
+    SettingsData_t config_;
 };
 
 #endif

@@ -7,12 +7,12 @@
 class BleAppKomoot : public BleAppBase
 {
   public:
-    BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, IUIKomoot* ui);
+    BleAppKomoot(events::EventQueue &event_queue, BLE &ble_interface, IUIKomoot& ui);
     virtual ~BleAppKomoot();
     bool ProcessData(const uint8_t *data, uint32_t len);
     void OnHVX(const GattHVXCallbackParams *params);
   protected:
-    IUIKomoot* ui_;
+    IUIKomoot& ui_;
     IUIKomoot::KomootData_t data_;
 };
 

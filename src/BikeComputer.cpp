@@ -5,12 +5,12 @@
 #define GAT_SERVICE_BAT (0x180Fu)
 const uint8_t GAT_SERVICE_KOMOOT[] = {0x71, 0xC1, 0xE1, 0x28, 0xD9, 0x2F, 0x4F, 0xA8, 0xA2, 0xB2, 0x0F, 0x17, 0x1D, 0xB3, 0x43, 0x6C};
 
-BikeComputer::BikeComputer(BLE &ble_interface, events::EventQueue &event_queue, UIMain *ui)
-    : BleManagerBase(ble_interface, event_queue), csc_app(event_queue_, ble_interface, ui), komoot_app(event_queue_, ble_interface, ui), ui_(ui)
+BikeComputer::BikeComputer(BLE &ble_interface, events::EventQueue &event_queue, UIMain &ui)
+    : BleManagerBase(ble_interface, event_queue), csc_app_(event_queue_, ble_interface, ui), komoot_app_(event_queue_, ble_interface, ui), ui_(ui)
 {
-    ui->SetBikeComputer(this);
-    RegisterApp(&csc_app);
-    RegisterApp(&komoot_app);
+    ui.SetBikeComputer(this);
+    RegisterApp(&csc_app_);
+    RegisterApp(&komoot_app_);
 }
 
 BikeComputer::~BikeComputer() {}
@@ -53,7 +53,7 @@ void BikeComputer::OnDataRead(const GattReadCallbackParams *params)
 
 BleAppBase *BikeComputer::GetAppWithConnHandle(Gap::Handle_t handle)
 {
-    for (std::vector<BleAppBase *>::iterator it = apps_.begin(); it != apps_.end(); ++it)
+    for (std::vector<BleAppBase*>::iterator it = apps_.begin(); it != apps_.end(); ++it)
     {
         if (handle == (*it)->GetConnectionHandle())
         {
@@ -89,12 +89,11 @@ void BikeComputer::OnFoundService16(uint16_t id, const Gap::AdvertisementCallbac
     FLOW("~BikeComputer::OnFoundService16(0x%x)\r\n", id);
     if (id == GAT_SERVICE_CSCS)
     {
-        if (!csc_app.FoundDevice())
+        if (!csc_app_.FoundDevice())
         {
             INFO("FOUND CSC\r\n");
             UILog("CSC\n");
-            csc_app.SetDeviceAddress(params);
-            //Connect(BC::eCsc);
+            csc_app_.SetDeviceAddress(params);
         }
         CheckScanStop();
     }
@@ -105,12 +104,11 @@ void BikeComputer::OnFoundService128(const uint8_t *id, const Gap::Advertisement
     FLOW("~BikeComputer::OnFoundService128(0x%x%x%x%x)\r\n", id[0], id[1], id[2], id[3]);
     if (IsSameId128(id, GAT_SERVICE_KOMOOT))
     {
-        if (!komoot_app.FoundDevice())
+        if (!komoot_app_.FoundDevice())
         {
             INFO("FOUND Komoot\r\n");
             UILog("Komoot\n");
-            komoot_app.SetDeviceAddress(params);
-            //Connect(BC::eKomoot);
+            komoot_app_.SetDeviceAddress(params);
         }
         CheckScanStop();
     }
@@ -119,17 +117,26 @@ void BikeComputer::OnFoundService128(const uint8_t *id, const Gap::Advertisement
 void BikeComputer::CheckScanStop()
 {
     bool isTimeout = GetScanTimeMs() > 5000;
+    uint32_t connected_cnt = 0;
     FLOW("~BikeComputer::CheckScanStop() CSC=%d, Komoot=%d, timeout=%d\r\n",
-         csc_app.FoundDevice(),
-         komoot_app.FoundDevice(),
+         csc_app_.FoundDevice(),
+         komoot_app_.FoundDevice(),
          isTimeout);
 
-    if (csc_app.FoundDevice() && komoot_app.FoundDevice())
+
+    for (std::vector<BleAppBase*>::iterator it = apps_.begin(); it != apps_.end(); ++it)
+    {
+        if ((*it)->FoundDevice()) {
+            connected_cnt++;
+        }
+    }
+
+    if (connected_cnt == apps_.size())
     {
         UILog("Found all\n");
         StopScan();
     }
-    else if (isTimeout && (csc_app.FoundDevice() || komoot_app.FoundDevice()))
+    else if (isTimeout && (connected_cnt > 0))
     {
         UILog("Scan timeout\n");
         StopScan();
@@ -159,10 +166,10 @@ BleAppBase *BikeComputer::GetAppWithId(BC::eApp_t app_id)
     switch (app_id)
     {
     case BC::eCsc:
-        app = &csc_app;
+        app = &csc_app_;
         break;
     case BC::eKomoot:
-        app = &komoot_app;
+        app = &komoot_app_;
         break;
     default:
         app = NULL;
@@ -182,17 +189,17 @@ void BikeComputer::Connect(BC::eApp_t app_id, uint32_t delay)
 
 void BikeComputer::SetUiMode(IUIMode::eUiMode_t mode)
 {
-    ui_->SetUiMode(mode);
+    ui_.SetUiMode(mode);
 }
 
 void BikeComputer::SetBacklightBrightness(uint8_t val)
 {
-    ui_->SetBacklightBrightness(val);
+    ui_.SetBacklightBrightness(val);
 }
 
 uint32_t BikeComputer::GetCscDisconnects()
 {
-    return csc_app.GetDisconnects();
+    return csc_app_.GetDisconnectCnt();
 }
 
 bool BikeComputer::IsAppAvailable(BC::eApp_t app_id)
@@ -203,12 +210,12 @@ bool BikeComputer::IsAppAvailable(BC::eApp_t app_id)
 
 uint8_t BikeComputer::GetCscBat()
 {
-    return csc_app.GetBatteryPercent();
+    return csc_app_.GetBatteryPercent();
 }
 
 IUICsc::CscData_t* BikeComputer::GetCscData()
 {
-    return &ui_->last_csc_;
+    return &ui_.last_csc_;
 }
 
 events::EventQueue* BikeComputer::GetEventQueue()

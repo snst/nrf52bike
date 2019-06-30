@@ -12,7 +12,7 @@ class UIMain;
 class BikeComputer : public BleManagerBase, public IBikeComputer
 {
 public:
-  BikeComputer(BLE &ble_interface, events::EventQueue& event_queue, UIMain *ui);
+  BikeComputer(BLE &ble_interface, events::EventQueue& event_queue, UIMain &ui);
   virtual ~BikeComputer();
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
   virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
@@ -24,11 +24,8 @@ public:
   BleAppBase* GetAppWithConnHandle(Gap::Handle_t handle);
   void RegisterApp(BleAppBase* app);
   void CheckScanStop();
-  std::vector<BleAppBase*> apps_;
-  
   virtual void Connect(BC::eApp_t app_id, uint32_t delay);  
   BleAppBase* GetAppWithId(BC::eApp_t app_id);
-
   virtual void SetUiMode(IUIMode::eUiMode_t mode);
   virtual void SetBacklightBrightness(uint8_t val);
   virtual uint32_t GetCscDisconnects();
@@ -38,11 +35,11 @@ public:
   void StopScan();
   virtual events::EventQueue* GetEventQueue();
 
-
 protected:
-  BleAppCsc csc_app;
-  BleAppKomoot komoot_app;
-  UIMain* ui_;
+  BleAppCsc csc_app_;
+  BleAppKomoot komoot_app_;
+  UIMain& ui_;
+  std::vector<BleAppBase*> apps_;
 };
 
-#endif
+#endif // BLE_MANAGER_H_

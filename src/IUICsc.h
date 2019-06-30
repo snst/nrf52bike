@@ -26,7 +26,6 @@ public:
     eConnecting,
     eConnected,
     eOnline,
-    eOffline    
   } ConState_t;
 
   virtual void Update(const CscData_t& data, bool force) = 0;

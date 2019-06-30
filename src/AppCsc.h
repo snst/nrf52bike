@@ -15,9 +15,8 @@ class AppCsc
     AppCsc();
     virtual ~AppCsc();
     bool ProcessData(uint32_t now_ms, const uint8_t *data, uint32_t len);
-    void CalculateAverageSpeed();
+    void CalculateSpeedValues();
     uint16_t AddFilterVal(uint16_t array[], uint16_t val);
-
 
   //protected:
     typedef struct cscMsg

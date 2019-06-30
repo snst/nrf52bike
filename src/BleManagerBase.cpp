@@ -1,8 +1,8 @@
 #include "BleManagerBase.h"
 #include "common.h"
 
-BleManagerBase::BleManagerBase(BLE &ble_interface, events::EventQueue &event_queue)
-    : ble_(ble_interface), event_queue_(event_queue), scanning_active_(false)
+BleManagerBase::BleManagerBase(BLE &ble, events::EventQueue &event_queue)
+    : ble_(ble), event_queue_(event_queue), scanning_active_(false)
 {
 }
 
@@ -20,12 +20,12 @@ void BleManagerBase::OnDisconnected(const Gap::DisconnectionCallbackParams_t *pa
 
 void BleManagerBase::OnDataRead(const GattReadCallbackParams *params)
 {
-    INFO("~BleManagerBase::OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
+    FLOW("~BleManagerBase::OnDataRead(): handle %u, len=%u, ", params->handle, params->len);
     for (unsigned index = 0; index < params->len; index++)
     {
-        INFO(" %02x", params->data[index]);
+        FLOW(" %02x", params->data[index]);
     }
-    INFO("\r\n");
+    FLOW("\r\n");
 }
 
 void BleManagerBase::OnHVX(const GattHVXCallbackParams *params)
@@ -77,9 +77,9 @@ void BleManagerBase::OnAdvertisement(const Gap::AdvertisementCallbackParams_t *p
     }
 }
 
-void BleManagerBase::StartScan(uint32_t timeout)
+void BleManagerBase::StartScan()
 {
-    INFO("~BleManagerBase::StartScan(), timeout=%u, active=%d\r\n", timeout, scanning_active_);
+    INFO("~BleManagerBase::StartScan(), active=%d\r\n", scanning_active_);
     if (!scanning_active_)
     {
         start_scan_ms_ = GetMillis();
@@ -87,10 +87,6 @@ void BleManagerBase::StartScan(uint32_t timeout)
         ble_.gap().setTxPower(4);
         ble_.gap().setScanParams(400, 400, 0, true);
         ble_.gap().startScan(this, &BleManagerBase::OnAdvertisement);
-        /*    if (timeout > 0)
-        {
-            event_queue_.call_in(timeout, mbed::callback(this, &BleManagerBase::OnScanTimeout));
-        }*/
     }
 }
 
@@ -114,17 +110,11 @@ bool BleManagerBase::IsScanActive()
     return scanning_active_;
 }
 
-void BleManagerBase::OnInitDone()
-{
-    INFO("~BleManagerBase::OnInitDone()\r\n");
-    UILog("Scanning\n");
-    StartScan();
-}
-
 void BleManagerBase::OnInitialized(BLE::InitializationCompleteCallbackContext *event)
 {
     INFO("~BleManagerBase::OnInitialized() err=0x%x\r\n", event->error);
-    OnInitDone();
+    UILog("Scanning\n");
+    StartScan();
 }
 
 void BleManagerBase::ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event)

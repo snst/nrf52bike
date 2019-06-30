@@ -5,7 +5,6 @@
 
 BleAppBase::BleAppBase(events::EventQueue &event_queue, BLE &ble_interface, char *name, BC::eApp_t id) : event_queue_(event_queue),
                                                                                                          ble_(ble_interface),
-                                                                                                         _post_init_cb(),
                                                                                                          desc2902_(NULL, GattAttribute::INVALID_HANDLE, GattAttribute::INVALID_HANDLE, UUID::ShortUUIDBytes_t(0)),
                                                                                                          found_characteristic_bat_(false),
                                                                                                          found_characteristic_(false),
@@ -198,11 +197,6 @@ void BleAppBase::ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc) {}
 void BleAppBase::OnDataRead(const GattReadCallbackParams *params) {}
 
 void BleAppBase::OnHVX(const GattHVXCallbackParams *params) {}
-
-void BleAppBase::on_init(mbed::Callback<void(BLE &, events::EventQueue &)> cb)
-{
-  _post_init_cb = cb;
-}
 
 void BleAppBase::SetDeviceAddress(const Gap::AdvertisementCallbackParams_t *params)
 {

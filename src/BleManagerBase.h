@@ -31,7 +31,7 @@ public:
     return makeFunctionPointer(this, member);
   }
 
-  BleManagerBase(BLE &ble_interface, events::EventQueue &event_queue);
+  BleManagerBase(BLE &ble, events::EventQueue &event_queue);
   virtual ~BleManagerBase();
   virtual void OnConnected(const Gap::ConnectionCallbackParams_t *params);
   virtual void OnDisconnected(const Gap::DisconnectionCallbackParams_t *param);
@@ -40,13 +40,12 @@ public:
   virtual void OnServiceDiscoveryFinished(Gap::Handle_t handle);
   virtual void OnFoundService16(uint16_t id, const Gap::AdvertisementCallbackParams_t *params);
   virtual void OnFoundService128(const uint8_t *id, const Gap::AdvertisementCallbackParams_t *params);
-  void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params);
-  void StartScan(uint32_t timeout = 0);
-  uint32_t GetScanTimeMs();
-  void StopScan();
-  virtual void OnInitDone();
   void OnInitialized(BLE::InitializationCompleteCallbackContext *event);
+  void OnAdvertisement(const Gap::AdvertisementCallbackParams_t *params);
+  void StartScan();
+  uint32_t GetScanTimeMs();
   void ScheduleBleEvents(BLE::OnEventsToProcessCallbackContext *event);
+  void StopScan();
   void Start();
   bool IsSameId128(const uint8_t *a, const uint8_t *b);
   bool IsScanActive();

@@ -14,6 +14,7 @@
 
 #define COLOR_GREEN Adafruit_ST7735::Color565(0, 255, 0)
 #define COLOR_WHITE 0xFFFF
+#define COLOR_BLACK 0x0
 #define COLOR_WARN Adafruit_ST7735::Color565(255, 120, 35)
 
 class UIMain : public IUICsc, public IUIKomoot, public IUILog
@@ -62,7 +63,6 @@ public:
   void HandleShortPress();
   void DrawSettings();
   uint8_t komoot_view_;
-  uint8_t last_distance_bar_;
   uint16_t last_direction_color_;
   bool enable_komoot_switch_;
   bool switched_to_csc_;
@@ -79,8 +79,6 @@ public:
   IUIKomoot::KomootData_t last_komoot_;
   UISettings uisettings_;
   ConState_t csc_conn_state_;
-  int csc_watchdog_event_id_;
-  void OnCscWatchdog();
   IBikeComputer *bike_computer_;
   void SetBikeComputer(IBikeComputer *bike_computer);
 };

@@ -46,11 +46,11 @@ UISettings::UISettings(GFX *tft)
                   {eSave, "Save", true, &UISettings::SaveSettings, eExit},                //
                   {eExit, "Exit", false, &UISettings::LeaveSettings, eStatus}})
 {
-    settings_.display_brightness_on = 7;
-    settings_.display_brightness_off = 9;
-    settings_.display_time = 10;
-    settings_.komoot_alert_dist = 400;
-    settings_.toggle_sec = 4;
+    config_.display_brightness_on = 7;
+    config_.display_brightness_off = 9;
+    config_.display_time = 10;
+    config_.komoot_alert_dist = 400;
+    config_.toggle_sec = 4;
 
     ret_code_t ret = fds_register(fds_evt_handler);
     if (ret == FDS_SUCCESS)
@@ -84,8 +84,8 @@ void UISettings::SaveSettings()
             fds_record_t record;
             record.file_id = FILE_ID;
             record.key = REC_KEY;
-            record.data.p_data = &settings_;
-            record.data.length_words = sizeof(settings_) / sizeof(uint32_t);
+            record.data.p_data = &config_;
+            record.data.length_words = sizeof(config_) / sizeof(uint32_t);
             err_code = fds_record_update(&record_desc, &record);
             INFO("fds_record_update 0x%x\r\n", err_code);
             err_code = fds_record_close(&record_desc);
@@ -100,7 +100,7 @@ void UISettings::SaveSettings()
         fds_record_desc_t record_desc2 = {0};
         record.file_id = FILE_ID;
         record.key = REC_KEY;
-        record.data.p_data = &settings_;
+        record.data.p_data = &config_;
         record.data.length_words = 1;
         err_code = fds_record_write(&record_desc2, &record);
         INFO("fds_record_write 0x%x\r\n", err_code);
@@ -122,9 +122,9 @@ void UISettings::LoadSettings()
         err_code = fds_record_open(&record_desc, &flash_record);
         if (err_code == FDS_SUCCESS)
         {
-            memcpy(&settings_, flash_record.p_data, sizeof(settings_));
+            memcpy(&config_, flash_record.p_data, sizeof(config_));
             err_code = fds_record_close(&record_desc);
-            INFO("Load settings: dispayOn=%u, displayOff=%u, time=%u, dist=%u\r\n", settings_.display_brightness_on, settings_.display_brightness_off, settings_.display_time, settings_.komoot_alert_dist);
+            INFO("Load settings: dispayOn=%u, displayOff=%u, time=%u, dist=%u\r\n", config_.display_brightness_on, config_.display_brightness_off, config_.display_time, config_.komoot_alert_dist);
             break;
         }
     }
@@ -148,39 +148,39 @@ void UISettings::ShortPress()
 
 void UISettings::IncAutoSwitch()
 {
-    settings_.auto_switch = settings_.auto_switch ? 0 : 1;
+    config_.auto_switch = config_.auto_switch ? 0 : 1;
 }
 
 void UISettings::IncLightUp()
 {
-    settings_.light_up = settings_.light_up ? 0 : 1;
+    config_.light_up = config_.light_up ? 0 : 1;
 }
 
 void UISettings::IncBrightnessDisplayOn()
 {
-    settings_.display_brightness_on = (settings_.display_brightness_on < 10) ? (settings_.display_brightness_on + 1) : 0;
-    bike_computer_->SetBacklightBrightness(settings_.display_brightness_on);
+    config_.display_brightness_on = (config_.display_brightness_on < 10) ? (config_.display_brightness_on + 1) : 0;
+    bike_computer_->SetBacklightBrightness(config_.display_brightness_on);
 }
 
 void UISettings::IncBrightnessDisplayOff()
 {
-    settings_.display_brightness_off = (settings_.display_brightness_off < 10) ? (settings_.display_brightness_off + 1) : 0;
-    bike_computer_->SetBacklightBrightness(settings_.display_brightness_off);
+    config_.display_brightness_off = (config_.display_brightness_off < 10) ? (config_.display_brightness_off + 1) : 0;
+    bike_computer_->SetBacklightBrightness(config_.display_brightness_off);
 }
 
 void UISettings::IncDislayTime()
 {
-    settings_.display_time = (settings_.display_time < 30) ? (settings_.display_time + 2) : 2;
+    config_.display_time = (config_.display_time < 30) ? (config_.display_time + 2) : 2;
 }
 
 void UISettings::IncToggleSec()
 {
-    settings_.toggle_sec = (settings_.toggle_sec < 10) ? (settings_.toggle_sec + 1) : 1;
+    config_.toggle_sec = (config_.toggle_sec < 10) ? (config_.toggle_sec + 1) : 1;
 }
 
 void UISettings::IncKomootAlertDist()
 {
-    settings_.komoot_alert_dist = (settings_.komoot_alert_dist < 500) ? (settings_.komoot_alert_dist + 50) : 50;
+    config_.komoot_alert_dist = (config_.komoot_alert_dist < 500) ? (config_.komoot_alert_dist + 50) : 50;
 }
 
 void UISettings::Connect()
@@ -238,25 +238,25 @@ void UISettings::Draw()
     }
     break;
     case eLedOn:
-        sprintf(str, "%i", settings_.display_brightness_on);
+        sprintf(str, "%i", config_.display_brightness_on);
         break;
     case eLedOff:
-        sprintf(str, "%i", settings_.display_brightness_off);
+        sprintf(str, "%i", config_.display_brightness_off);
         break;
     case eTime:
-        sprintf(str, "%i s", settings_.display_time);
+        sprintf(str, "%i s", config_.display_time);
         break;
     case eDist:
-        sprintf(str, "%i m", settings_.komoot_alert_dist);
+        sprintf(str, "%i m", config_.komoot_alert_dist);
         break;
     case eAutoSwitch:
-        sprintf(str, "%s", settings_.auto_switch ? "on" : "off");
+        sprintf(str, "%s", config_.auto_switch ? "on" : "off");
         break;
     case eLightUp:
-        sprintf(str, "%s", settings_.light_up ? "on" : "off");
+        sprintf(str, "%s", config_.light_up ? "on" : "off");
         break;
     case eToggleSec:
-        sprintf(str, "%i s", settings_.toggle_sec);
+        sprintf(str, "%i s", config_.toggle_sec);
         break;
     case eConnect:
         sprintf(str, "%u", bike_computer_->GetCscDisconnects());

@@ -4,7 +4,6 @@
 class IUIMode
 {
     public:
-      
     enum eUiMode_t
     {
         eStartup,

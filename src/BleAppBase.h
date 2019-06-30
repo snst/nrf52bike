@@ -47,7 +47,6 @@ public:
   void ReadNotifyStatus(DiscoveredCharacteristicDescriptor &desc);
   virtual void OnDataRead(const GattReadCallbackParams *params);
   virtual void OnHVX(const GattHVXCallbackParams *params);
-  void on_init(mbed::Callback<void(BLE &, events::EventQueue &)> cb);
   void SetDeviceAddress(const Gap::AdvertisementCallbackParams_t *params);
   bool HasAddress(const BLEProtocol::AddressBytes_t &peerAddr);
   void FindCharacteristic(uint16_t id);
@@ -67,8 +66,6 @@ public:
 protected:
   events::EventQueue &event_queue_;
   BLE &ble_;
-  mbed::Callback<void(BLE &, events::EventQueue &)> _post_init_cb;
-
   Gap::Handle_t connection_handle_;
   GattAttribute::Handle_t descriptor_handle_;
   DiscoveredCharacteristic characteristic_bat_;

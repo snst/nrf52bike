@@ -64,37 +64,37 @@ TEST(CSC, AverageSpeed)
 {
     CscTestData d;
     AppCsc csc(&d);
-    csc.data_.trip_distance_cm = 23*1000*100;
-    csc.data_.trip_time_ms = 30 * 60 * 1000;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ(460, csc.data_.average_speed_kmhX10);
+    csc.config_.trip_distance_cm = 23*1000*100;
+    csc.config_.trip_time_ms = 30 * 60 * 1000;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ(460, csc.config_.average_speed_kmhX10);
 }
 
 TEST(CSC, FilteredSpeed)
 {
     CscTestData d;
     AppCsc csc(&d);
-    EXPECT_EQ(0, csc.data_.filtered_speed_kmhX10);
+    EXPECT_EQ(0, csc.config_.filtered_speed_kmhX10);
 
-    csc.data_.speed_kmhX10 = 0;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ(0, csc.data_.filtered_speed_kmhX10);
+    csc.config_.speed_kmhX10 = 0;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ(0, csc.config_.filtered_speed_kmhX10);
 
-    csc.data_.speed_kmhX10 = 100;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ(100 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    csc.config_.speed_kmhX10 = 100;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ(100 / FILTER_VALUES_CNT, csc.config_.filtered_speed_kmhX10);
 
-    csc.data_.speed_kmhX10 = 50;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ(150 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    csc.config_.speed_kmhX10 = 50;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ(150 / FILTER_VALUES_CNT, csc.config_.filtered_speed_kmhX10);
 
-    csc.data_.speed_kmhX10 = 200;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ(350 / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    csc.config_.speed_kmhX10 = 200;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ(350 / FILTER_VALUES_CNT, csc.config_.filtered_speed_kmhX10);
 
-    csc.data_.speed_kmhX10 = 80;
-    csc.CalculateAverageSpeed();
-    EXPECT_EQ((50+200+80) / FILTER_VALUES_CNT, csc.data_.filtered_speed_kmhX10);
+    csc.config_.speed_kmhX10 = 80;
+    csc.CalculateSpeedValues();
+    EXPECT_EQ((50+200+80) / FILTER_VALUES_CNT, csc.config_.filtered_speed_kmhX10);
 }
 
 TEST(common, utf_0x01)
