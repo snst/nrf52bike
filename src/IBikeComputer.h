@@ -17,6 +17,7 @@ public:
   virtual uint8_t GetCscBat() = 0;
   virtual IUICsc::CscData_t* GetCscData() = 0;
   virtual events::EventQueue* GetEventQueue() = 0;
+  virtual void StopScan() = 0;
 };
 
 #endif

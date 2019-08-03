@@ -22,11 +22,11 @@ IUILog *uilog = NULL;
 PwmOut display_led(BC_DISPLAY_LED);
 
 UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
-    : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup),           //
-      komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false),       //
-      last_direction_color_(0), touch_consumed_(true), //
-      uisettings_(tft), led_event_id_(0), ignore_touch_up_(false),                  //
-      switched_to_komoot_100_(false), switched_to_komoot_500_(false),               //
+    : tft_(tft), event_queue_(event_queue), gui_mode_(IUIMode::eStartup),     //
+      komoot_view_(0), enable_komoot_switch_(false), switched_to_csc_(false), //
+      last_direction_color_(0), touch_consumed_(true),                        //
+      uisettings_(tft), led_event_id_(0), ignore_touch_up_(false),            //
+      switched_to_komoot_100_(false), switched_to_komoot_500_(false),         //
       csc_conn_state_(eDisconnected), longpress_id_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
@@ -47,7 +47,8 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 void UIMain::HandleLongPress()
 {
     touch_consumed_ = true;
-    if (0 != longpress_id_) {
+    if (0 != longpress_id_)
+    {
         longpress_id_ = 0;
         switch (gui_mode_)
         {
@@ -68,7 +69,8 @@ void UIMain::HandleShortPress()
     {
     default:
     case IUIMode::eStartup:
-        SetUiMode(IUIMode::eCsc);
+        bike_computer_->StopScan();
+        SetOperational();
         break;
     case IUIMode::eKomoot:
         if (bike_computer_->IsAppAvailable(BC::eCsc))
@@ -92,7 +94,8 @@ void UIMain::TouchDown()
 {
     //INFO("D\r\n");
     ignore_touch_up_ = (0 == led_event_id_);
-    if (0 == longpress_id_) {
+    if (0 == longpress_id_)
+    {
         longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress));
     }
     touch_consumed_ = false;
@@ -109,7 +112,8 @@ void UIMain::TouchUp()
     if (!touch_consumed_) // => short press
     {
         touch_consumed_ = true;
-        if (0 != longpress_id_) {
+        if (0 != longpress_id_)
+        {
             event_queue_.cancel(longpress_id_);
             longpress_id_ = 0;
         }
@@ -134,13 +138,13 @@ void UIMain::Update(const IUICsc::CscData_t &data, bool force)
             FLOW("Update, eCsc, filtered speed: %u\r\n", data.filtered_speed_kmhX10);
             DrawSpeed(Y_LINE1, data.filtered_speed_kmhX10);
         }
-        
+
         if (force || (last_csc_.average_speed_kmhX10 != data.average_speed_kmhX10))
         {
             INFO("Update, eCsc, average speed: %u\r\n", data.average_speed_kmhX10);
             DrawAverageSpeed(Y_LINE3, data.average_speed_kmhX10);
         }
-        
+
         if (force || (last_csc_.cadence != data.cadence))
         {
             FLOW("Update, eCsc, cadence: %u\r\n", data.cadence);
@@ -167,6 +171,10 @@ void UIMain::Update(const IUIKomoot::KomootData_t &data, bool force)
 {
     FLOW("UIMain::Update(Komoot), force=%d\r\n", force);
     SetOperational();
+    if (IUIMode::eSettings == gui_mode_)
+    {
+        return;
+    }
 
     if (data.distance_m <= uisettings_.config_.komoot_alert_dist)
     {
@@ -403,9 +411,12 @@ void UIMain::DrawDistance(uint16_t y, uint32_t trip_distance_m, uint16_t color)
     //trip_distance_m = 144440;
     //trip_distance_m = 44544;
     uint16_t km = trip_distance_m / 1000;
-    if (trip_distance_m < 100000) {
+    if (trip_distance_m < 100000)
+    {
         sprintf(str, "%i.%.2i", km, (trip_distance_m % 1000) / 10);
-    } else {
+    }
+    else
+    {
         sprintf(str, "%i.%i", km, (trip_distance_m % 1000) / 100);
     }
 
@@ -504,7 +515,7 @@ void UIMain::DrawCscToggleDisplay(const IUICsc::CscData_t &data, bool force)
         {
             FLOW("Update, eCsc, trip time: %u\r\n", data.trip_time_ms);
             DrawTime(Y_LINE4, data.trip_time_ms / 1000, color);
-        }        
+        }
         break;
 
     case eView2:
