@@ -27,7 +27,7 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
       last_direction_color_(0), touch_consumed_(true),                        //
       uisettings_(tft), led_event_id_(0), ignore_touch_up_(false),            //
       switched_to_komoot_100_(false), switched_to_komoot_500_(false),         //
-      csc_conn_state_(eDisconnected), longpress_id_(0)
+      csc_conn_state_(eDisconnected), long_touch_cnt_(0)
 {
     tft_->fillScreen(ST77XX_BLACK);
     tft_->setTextColor(COLOR_WHITE);
@@ -44,12 +44,11 @@ UIMain::UIMain(GFX *tft, events::EventQueue &event_queue)
 
 #define LONGPRESS_MS (1000u)
 
-void UIMain::HandleLongPress()
+void UIMain::HandleLongPress(int32_t i)
 {
     touch_consumed_ = true;
-    if (0 != longpress_id_)
+    if (long_touch_cnt_ == i)
     {
-        longpress_id_ = 0;
         switch (gui_mode_)
         {
         case IUIMode::eSettings:
@@ -94,10 +93,8 @@ void UIMain::TouchDown()
 {
     //INFO("D\r\n");
     ignore_touch_up_ = (0 == led_event_id_);
-    if (0 == longpress_id_)
-    {
-        longpress_id_ = event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress));
-    }
+    long_touch_cnt_++;
+    event_queue_.call_in(LONGPRESS_MS, mbed::callback(this, &UIMain::HandleLongPress),long_touch_cnt_);
     touch_consumed_ = false;
     SetBacklightOn();
 }
@@ -109,14 +106,10 @@ bool UIMain::IgnoreShortTouchUp()
 
 void UIMain::TouchUp()
 {
+    long_touch_cnt_++;
     if (!touch_consumed_) // => short press
     {
         touch_consumed_ = true;
-        if (0 != longpress_id_)
-        {
-            event_queue_.cancel(longpress_id_);
-            longpress_id_ = 0;
-        }
 
         if (!IgnoreShortTouchUp())
         {

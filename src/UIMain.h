@@ -59,14 +59,13 @@ public:
   void SetCadenceColor(uint16_t cadence);
   uint16_t GetKomootDirectionColor(uint16_t distance_m);
   bool IgnoreShortTouchUp();
-  void HandleLongPress();
+  void HandleLongPress(int32_t i);
   void HandleShortPress();
   void DrawSettings();
   uint8_t komoot_view_;
   uint16_t last_direction_color_;
   bool enable_komoot_switch_;
   bool switched_to_csc_;
-  int longpress_id_;
   bool touch_consumed_;
   void IncBrightnessDisplayOn();
   void IncBrightnessDisplayOff();
@@ -74,6 +73,7 @@ public:
   bool ignore_touch_up_;
   bool switched_to_komoot_100_;
   bool switched_to_komoot_500_;
+  uint16_t long_touch_cnt_;
 
   IUICsc::CscData_t last_csc_;
   IUIKomoot::KomootData_t last_komoot_;
